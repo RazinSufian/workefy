@@ -8,17 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ArrowLeft, Search, Filter, Star, MapPin, Phone, Mail, User, Briefcase } from 'lucide-react';
-import { Worker, User, Category } from '@/types';
 
 export default function FindWorkersPage() {
-  const [workers, setWorkers] = useState<Worker[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [workers, setWorkers] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [ratingFilter, setRatingFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [ratingFilter, setRatingFilter] = useState('all');
   const [sortBy, setSortBy] = useState('rating');
-  const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
+  const [selectedWorker, setSelectedWorker] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -41,7 +40,7 @@ export default function FindWorkersPage() {
   }, []);
 
   // Filter and sort workers
-  let filteredWorkers = workers.filter(worker => 
+  let filteredWorkers = workers.filter(worker =>
     worker.verification_status === 'approved' && worker.is_available
   );
 
@@ -49,18 +48,18 @@ export default function FindWorkersPage() {
     filteredWorkers = filteredWorkers.filter(worker => {
       const user = users.find(u => u.user_id === worker.user_id);
       return worker.skills.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             user?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             user?.address.toLowerCase().includes(searchTerm.toLowerCase());
+        user?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user?.address.toLowerCase().includes(searchTerm.toLowerCase());
     });
   }
 
-  if (categoryFilter) {
-    filteredWorkers = filteredWorkers.filter(worker => 
+  if (categoryFilter && categoryFilter !== 'all') {
+    filteredWorkers = filteredWorkers.filter(worker =>
       worker.category_id.toString() === categoryFilter
     );
   }
 
-  if (ratingFilter) {
+  if (ratingFilter && ratingFilter !== 'all') {
     const minRating = parseFloat(ratingFilter);
     filteredWorkers = filteredWorkers.filter(worker => worker.rating >= minRating);
   }
@@ -81,7 +80,7 @@ export default function FindWorkersPage() {
     }
   });
 
-  const handleHireWorker = (workerId: number) => {
+  const handleHireWorker = (workerId) => {
     // This would typically redirect to job posting with pre-selected worker
     console.log('Hiring worker:', workerId);
   };
@@ -126,13 +125,13 @@ export default function FindWorkersPage() {
                   />
                 </div>
               </div>
-              
+
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {categories.map(cat => (
                     <SelectItem key={cat.category_id} value={cat.category_id.toString()}>
                       {cat.name}
@@ -146,7 +145,7 @@ export default function FindWorkersPage() {
                   <SelectValue placeholder="Min Rating" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any Rating</SelectItem>
+                  <SelectItem value="all">Any Rating</SelectItem>
                   <SelectItem value="4.5">4.5+ Stars</SelectItem>
                   <SelectItem value="4.0">4.0+ Stars</SelectItem>
                   <SelectItem value="3.5">3.5+ Stars</SelectItem>
@@ -196,7 +195,7 @@ export default function FindWorkersPage() {
                       <Briefcase className="h-4 w-4 text-gray-400" />
                       <span>{category?.name} Work</span>
                     </div>
-                    
+
                     <div className="flex items-center space-x-2 text-sm">
                       <MapPin className="h-4 w-4 text-gray-400" />
                       <span>{workerUser?.address}</span>
@@ -239,7 +238,7 @@ export default function FindWorkersPage() {
                                     </div>
                                   </div>
                                 </div>
-                                
+
                                 <div>
                                   <h3 className="font-medium mb-2">Work Details</h3>
                                   <div className="space-y-2 text-sm">
@@ -254,7 +253,7 @@ export default function FindWorkersPage() {
                               <div>
                                 <h3 className="font-medium mb-2">Availability</h3>
                                 <div className="flex flex-wrap gap-2">
-                                  {selectedWorker.preferred_times?.split(', ').map((time: string) => (
+                                  {selectedWorker.preferred_times?.split(', ').map((time) => (
                                     <Badge key={time} variant="outline" className="capitalize">
                                       {time}
                                     </Badge>
@@ -274,7 +273,7 @@ export default function FindWorkersPage() {
                           )}
                         </DialogContent>
                       </Dialog>
-                      
+
                       <Button size="sm" onClick={() => handleHireWorker(worker.worker_id)}>
                         Hire Now
                       </Button>
@@ -294,8 +293,8 @@ export default function FindWorkersPage() {
               <p className="text-gray-500 mb-4">Try adjusting your search criteria or filters</p>
               <Button variant="outline" onClick={() => {
                 setSearchTerm('');
-                setCategoryFilter('');
-                setRatingFilter('');
+                setCategoryFilter('all');
+                setRatingFilter('all');
               }}>
                 Clear Filters
               </Button>

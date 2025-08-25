@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, User, Upload, Save, Camera } from 'lucide-react';
 import { toast } from 'sonner';
-import { User, Worker, Category } from '@/types';
 
 export default function WorkerProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -84,14 +83,14 @@ export default function WorkerProfilePage() {
   const handleTimeChange = (time, checked) => {
     setFormData(prev => ({
       ...prev,
-      preferredTimes: checked 
+      preferredTimes: checked
         ? [...prev.preferredTimes, time]
         : prev.preferredTimes.filter(t => t !== time)
     }));
   };
 
   const handleAvailabilityChange = (dayIndex, timeSlot, checked) => {
-    setAvailabilitySlots(prev => prev.map((slot, index) => 
+    setAvailabilitySlots(prev => prev.map((slot, index) =>
       index === dayIndex ? { ...slot, [timeSlot]: checked } : slot
     ));
   };
@@ -234,7 +233,7 @@ export default function WorkerProfilePage() {
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="address">Address</Label>
                   <Textarea
@@ -290,7 +289,7 @@ export default function WorkerProfilePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="hourlyRate">Hourly Rate (৳)</Label>
                     <Input

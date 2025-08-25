@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ArrowLeft, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
-import { Category, User, Client } from '@/types';
 import Link from 'next/link';
 
 export default function PostJobPage() {
@@ -18,22 +17,24 @@ export default function PostJobPage() {
   const [categories, setCategories] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [clientData, setClientData] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     category: '',
     location: '',
-    durationType: '',
-    durationValue: '',
+    durationType: 'hour', // Default value to prevent null
+    durationValue: '1', // Default value to prevent null
     workersNeeded: '1',
     budget: '',
-    jobType: 'direct_hire', // direct_hire or bidding
-    paymentType: 'online', // online or manual
+    jobType: 'direct_hire',
+    paymentType: 'online',
     startDate: ''
   });
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         const [categoriesRes, usersRes] = await Promise.all([
           fetch('/api/categories'),
@@ -56,6 +57,9 @@ export default function PostJobPage() {
       } catch (error) {
         console.error("Failed to fetch data:", error);
       }
+      finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
@@ -63,9 +67,10 @@ export default function PostJobPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.title || !formData.description || !formData.category || !formData.budget) {
-      toast.error('Please fill in all required fields');
+
+    // Enhanced validation
+    if (!formData.title || !formData.description || !formData.category || !formData.budget || !formData.location) {
+      toast.error('Please fill in all required fields (Title, Description, Category, Location, Budget)');
       return;
     }
 
@@ -75,18 +80,36 @@ export default function PostJobPage() {
     }
 
     try {
+      // Map frontend field names to backend field names with proper data types
+      const jobData = {
+        client_id: clientData.client_id,
+        category_id: parseInt(formData.category),
+        title: formData.title,
+        description: formData.description,
+        location: formData.location,
+        duration_type: formData.durationType, // This maps to backend field name
+        duration_value: formData.durationValue ? parseInt(formData.durationValue) : null,
+        workers_needed: formData.workersNeeded ? parseInt(formData.workersNeeded) : 1,
+        budget: parseFloat(formData.budget),
+        job_type: formData.jobType,
+        payment_type: formData.paymentType,
+        start_date: formData.startDate || null,
+        status: 'posted'
+      };
+
+      console.log('Sending job data:', jobData); // Debug log
+
       const res = await fetch('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          client_id: clientData.client_id,
-          category_id: formData.category,
-        }),
+        body: JSON.stringify(jobData),
       });
 
+      const responseData = await res.json();
+
       if (!res.ok) {
-        throw new Error('Failed to post job');
+        console.error('API Error:', responseData);
+        throw new Error(responseData.message || 'Failed to post job');
       }
 
       toast.success('Job posted successfully!');
@@ -96,7 +119,7 @@ export default function PostJobPage() {
 
     } catch (error) {
       console.error("Failed to post job:", error);
-      toast.error('Failed to post job. Please try again.');
+      toast.error(`Failed to post job: ${error.message}`);
     }
   };
 
@@ -130,11 +153,11 @@ export default function PostJobPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-6">
                 {/* Basic Information */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Job Details</h3>
-                  
+
                   <div>
                     <Label htmlFor="title">Job Title *</Label>
                     <Input
@@ -161,7 +184,7 @@ export default function PostJobPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label>Work Category *</Label>
-                      <Select onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+                      <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
@@ -191,11 +214,11 @@ export default function PostJobPage() {
                 {/* Duration and Workers */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Job Requirements</h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <Label>Duration Type</Label>
-                      <Select onValueChange={(value) => setFormData(prev => ({ ...prev, durationType: value }))}>
+                      <Label>Duration Type *</Label>
+                      <Select value={formData.durationType} onValueChange={(value) => setFormData(prev => ({ ...prev, durationType: value }))}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select type" />
                         </SelectTrigger>
@@ -208,7 +231,7 @@ export default function PostJobPage() {
                     </div>
 
                     <div>
-                      <Label htmlFor="durationValue">Duration Value</Label>
+                      <Label htmlFor="durationValue">Duration Value *</Label>
                       <Input
                         id="durationValue"
                         type="number"
@@ -216,6 +239,7 @@ export default function PostJobPage() {
                         value={formData.durationValue}
                         onChange={(e) => setFormData(prev => ({ ...prev, durationValue: e.target.value }))}
                         placeholder="e.g., 3"
+                        required
                       />
                     </div>
 
@@ -260,7 +284,7 @@ export default function PostJobPage() {
                 {/* Hiring Type */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Hiring Method</h3>
-                  
+
                   <RadioGroup value={formData.jobType} onValueChange={(value) => setFormData(prev => ({ ...prev, jobType: value }))}>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="direct_hire" id="direct_hire" />
@@ -276,7 +300,7 @@ export default function PostJobPage() {
                 {/* Payment Method */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Payment Method</h3>
-                  
+
                   <RadioGroup value={formData.paymentType} onValueChange={(value) => setFormData(prev => ({ ...prev, paymentType: value }))}>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="online" id="online" />
@@ -292,21 +316,21 @@ export default function PostJobPage() {
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h4 className="font-medium text-blue-900 mb-2">Important Notice</h4>
                   <p className="text-sm text-blue-800">
-                    By posting this job, you acknowledge that you are responsible for worker safety 
-                    and any damage that may occur during the job execution. Please ensure proper 
+                    By posting this job, you acknowledge that you are responsible for worker safety
+                    and any damage that may occur during the job execution. Please ensure proper
                     safety measures are in place.
                   </p>
                 </div>
 
                 <div className="flex space-x-4">
-                  <Button type="submit" className="flex-1">
+                  <Button disabled={loading} onClick={handleSubmit} className="flex-1">
                     Post Job
                   </Button>
                   <Button type="button" variant="outline" onClick={() => router.back()}>
                     Cancel
                   </Button>
                 </div>
-              </form>
+              </div>
             </CardContent>
           </Card>
         </div>

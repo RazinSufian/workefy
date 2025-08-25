@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Briefcase, Plus, Users, DollarSign, Clock, Star,
-  MapPin, Calendar, LogOut, Eye
+  MapPin, Calendar, LogOut, Eye,
+  Search
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';

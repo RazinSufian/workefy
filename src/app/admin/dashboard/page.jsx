@@ -10,7 +10,6 @@ import {
   Shield, Users, Briefcase, DollarSign, TrendingUp, CheckCircle,
   XCircle, Clock, AlertTriangle, LogOut, Settings
 } from 'lucide-react';
-import { User, Worker, Job, Payment, CashoutRequest, Dispute } from '@/types';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
@@ -181,6 +180,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="cashouts">Cashout Requests</TabsTrigger>
             <TabsTrigger value="disputes">Disputes</TabsTrigger>
+            <TabsTrigger value="categories">Categories</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
@@ -238,6 +238,15 @@ export default function AdminDashboard() {
               </div>
             </div>
           </TabsContent>
+
+          <TabsContent value="categories" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Categories</h2>
+              <Button asChild>
+                <Link href="/admin/categories">Manage Categories</Link>
+              </Button>
+            </div>
+            </TabsContent>
 
           <TabsContent value="jobs" className="space-y-6">
             <div>

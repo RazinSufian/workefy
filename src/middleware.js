@@ -2,7 +2,12 @@ import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 
 export async function middleware(req) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  // Get the token from the request
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET
+  });
+
   const { pathname } = req.nextUrl;
 
   console.log("Token:", token);
@@ -15,13 +20,16 @@ export async function middleware(req) {
       pathname.startsWith("/worker") ||
       pathname.startsWith("/client")
     ) {
-      return NextResponse.redirect(new URL("/auth/login", req.url));
+      const loginUrl = new URL("/auth/login", req.url);
+      loginUrl.searchParams.set("callbackUrl", req.url);
+      return NextResponse.redirect(loginUrl);
     }
     return NextResponse.next();
   }
 
   // User is authenticated, check role-based access
   const userRole = token.role;
+  console.log("User Role:", userRole);
 
   // Admin routes - only allow admin users
   if (pathname.startsWith("/admin") && userRole !== "admin") {
@@ -55,10 +63,30 @@ export async function middleware(req) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
+  // Redirect authenticated users away from auth pages
+  if (token && (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/register"))) {
+    // Redirect to appropriate dashboard based on user role
+    if (userRole === "admin") {
+      return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+    } else if (userRole === "worker") {
+      return NextResponse.redirect(new URL("/worker/dashboard", req.url));
+    } else if (userRole === "client") {
+      return NextResponse.redirect(new URL("/client/dashboard", req.url));
+    }
+    // Fallback to home page
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+
   // Allow access if user has correct role or accessing other routes
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/worker/:path*", "/client/:path*"],
+  matcher: [
+    "/admin/:path*",
+    "/worker/:path*",
+    "/client/:path*",
+    "/auth/login",
+    "/auth/register"
+  ],
 };

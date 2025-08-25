@@ -1,9 +1,8 @@
-
 import { NextResponse } from "next/server";
 import dbConnection from "@/lib/dbConnect";
 
 // ->> /api/clients
-export async function GET(requestt) {
+export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId");
 
@@ -26,7 +25,7 @@ export async function GET(requestt) {
   }
 }
 
-export async function POST(requestt) {
+export async function POST(request) {
   try {
     const { user_id, safety_agreement_accepted, total_jobs_posted, rating } = await request.json();
     const conn = await dbConnection();

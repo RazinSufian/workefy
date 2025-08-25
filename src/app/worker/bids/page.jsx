@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ArrowLeft, DollarSign, Clock, MapPin, Calendar, Send } from 'lucide-react';
 import { toast } from 'sonner';
-import { Job, Bidding, User, Worker } from '@/types';
 
 export default function WorkerBidsPage() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -55,8 +54,8 @@ export default function WorkerBidsPage() {
   }, []);
 
   // Get available jobs for bidding
-  const availableJobs = jobs.filter(job => 
-    job.job_type === 'bidding' && 
+  const availableJobs = jobs.filter(job =>
+    job.job_type === 'bidding' &&
     job.status === 'posted' &&
     job.category_id === workerData?.category_id
   );
@@ -169,7 +168,7 @@ export default function WorkerBidsPage() {
                           </div>
                           <Badge variant={
                             existingBid.status === 'accepted' ? 'default' :
-                            existingBid.status === 'pending' ? 'secondary' : 'destructive'
+                              existingBid.status === 'pending' ? 'secondary' : 'destructive'
                           }>
                             {existingBid.status}
                           </Badge>
@@ -244,7 +243,7 @@ export default function WorkerBidsPage() {
                         </div>
                         <Badge variant={
                           bid.status === 'accepted' ? 'default' :
-                          bid.status === 'pending' ? 'secondary' : 'destructive'
+                            bid.status === 'pending' ? 'secondary' : 'destructive'
                         }>
                           {bid.status}
                         </Badge>
@@ -261,14 +260,14 @@ export default function WorkerBidsPage() {
                           <div className="font-medium">৳{job?.budget.toLocaleString()}</div>
                         </div>
                       </div>
-                      
+
                       {bid.status === 'accepted' && (
                         <div className="mt-4 p-3 bg-green-50 rounded-lg">
                           <div className="text-green-800 font-medium">Congratulations! Your bid was accepted.</div>
                           <div className="text-green-600 text-sm">Check your dashboard for job details.</div>
                         </div>
                       )}
-                      
+
                       {bid.status === 'rejected' && (
                         <div className="mt-4 p-3 bg-red-50 rounded-lg">
                           <div className="text-red-800 font-medium">Bid was not selected</div>

@@ -6,11 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  User, Briefcase, DollarSign, Clock, Star, CheckCircle, 
-  AlertCircle, Calendar, MapPin, LogOut 
+import {
+  User, Briefcase, DollarSign, Clock, Star, CheckCircle,
+  AlertCircle, Calendar, MapPin, LogOut
 } from 'lucide-react';
-import { User, Worker, Job, Bidding, CashoutRequest } from '@/types';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
@@ -184,8 +183,8 @@ export default function WorkerDashboard() {
                         </div>
                         <Badge variant={
                           job.status === 'completed' ? 'default' :
-                          job.status === 'in_progress' ? 'secondary' :
-                          job.status === 'assigned' ? 'outline' : 'destructive'
+                            job.status === 'in_progress' ? 'secondary' :
+                              job.status === 'assigned' ? 'outline' : 'destructive'
                         }>
                           {job.status.replace('_', ' ').toUpperCase()}
                         </Badge>
@@ -285,7 +284,7 @@ export default function WorkerDashboard() {
                         </div>
                         <Badge variant={
                           bid.status === 'accepted' ? 'default' :
-                          bid.status === 'pending' ? 'secondary' : 'destructive'
+                            bid.status === 'pending' ? 'secondary' : 'destructive'
                         }>
                           {bid.status}
                         </Badge>
@@ -344,7 +343,7 @@ export default function WorkerDashboard() {
                         </div>
                         <Badge variant={
                           request.status === 'approved' ? 'default' :
-                          request.status === 'pending' ? 'secondary' : 'destructive'
+                            request.status === 'pending' ? 'secondary' : 'destructive'
                         }>
                           {request.status}
                         </Badge>
