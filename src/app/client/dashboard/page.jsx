@@ -5,11 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Briefcase, Plus, Users, DollarSign, Clock, Star, 
+import {
+  Briefcase, Plus, Users, DollarSign, Clock, Star,
   MapPin, Calendar, LogOut, Eye
 } from 'lucide-react';
-import { User, Client, Job, Bidding, Worker, Review } from '@/types';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
@@ -183,9 +182,9 @@ export default function ClientDashboard() {
                         <div className="flex flex-col items-end space-y-2">
                           <Badge variant={
                             job.status === 'completed' ? 'default' :
-                            job.status === 'in_progress' ? 'secondary' :
-                            job.status === 'assigned' ? 'outline' :
-                            job.status === 'posted' ? 'secondary' : 'destructive'
+                              job.status === 'in_progress' ? 'secondary' :
+                                job.status === 'assigned' ? 'outline' :
+                                  job.status === 'posted' ? 'secondary' : 'destructive'
                           }>
                             {job.status.replace('_', ' ').toUpperCase()}
                           </Badge>
@@ -315,19 +314,19 @@ export default function ClientDashboard() {
                 <div className="text-center mb-6">
                   <div className="text-4xl font-bold text-blue-600">{clientData?.rating}/5.0</div>
                   <div className="flex justify-center items-center space-x-1 mt-2">
-                    {[1,2,3,4,5].map(star => (
+                    {[1, 2, 3, 4, 5].map(star => (
                       <Star key={star} className="h-5 w-5 text-yellow-400 fill-current" />
                     ))}
                   </div>
                   <div className="text-gray-500 mt-2">Based on {stats.completedJobs} completed jobs</div>
                 </div>
-                
+
                 <div className="space-y-4">
                   {reviews.filter(r => r.reviewee_id === currentUser.user_id).map(review => (
                     <div key={review.review_id} className="border rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center space-x-1">
-                          {[1,2,3,4,5].map(star => (
+                          {[1, 2, 3, 4, 5].map(star => (
                             <Star key={star} className={`h-4 w-4 ${star <= review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
                           ))}
                         </div>
@@ -337,7 +336,7 @@ export default function ClientDashboard() {
                     </div>
                   ))}
                 </div>
-                
+
                 <Button variant="outline" asChild>
                   <Link href="/client/profile">Edit Profile</Link>
                 </Button>

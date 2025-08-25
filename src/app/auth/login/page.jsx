@@ -19,7 +19,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const result = await signIn("credentials", {
       redirect: false,
       email: formData.email,
@@ -73,22 +73,7 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6">
-            <div className="text-center text-sm text-gray-500 mb-4">
-              Demo Accounts (use any password):
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="bg-gray-50 p-2 rounded">
-                <strong>Worker:</strong> john@worker.com
-              </div>
-              <div className="bg-gray-50 p-2 rounded">
-                <strong>Client:</strong> david@client.com
-              </div>
-              <div className="bg-gray-50 p-2 rounded">
-                <strong>Admin:</strong> admin@system.com
-              </div>
-            </div>
-          </div>
+
 
           <div className="mt-6 text-center text-sm text-gray-500">
             Don't have an account?{' '}

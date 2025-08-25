@@ -33,12 +33,14 @@ CREATE TABLE users (
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE,
     phone VARCHAR(20),
+    password VARCHAR(255) NOT NULL,
     address TEXT,
     role ENUM('worker', 'client', 'admin') NOT NULL,
     agreement_signed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE users
 -- =========================================
 -- Workers table
 -- =========================================

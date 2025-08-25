@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Shield, Users, Briefcase, DollarSign, TrendingUp, CheckCircle, 
+import {
+  Shield, Users, Briefcase, DollarSign, TrendingUp, CheckCircle,
   XCircle, Clock, AlertTriangle, LogOut, Settings
 } from 'lucide-react';
 import { User, Worker, Job, Payment, CashoutRequest, Dispute } from '@/types';
@@ -17,12 +17,12 @@ import { useRouter } from 'next/navigation';
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [users, setUsers] = useState<User[]>([]);
-  const [workers, setWorkers] = useState<Worker[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [cashoutRequests, setCashoutRequests] = useState<CashoutRequest[]>([]);
-  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [users, setUsers] = useState([]);
+  const [workers, setWorkers] = useState([]);
+  const [jobs, setJobs] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [cashoutRequests, setCashoutRequests] = useState([]);
+  const [disputes, setDisputes] = useState([]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -30,7 +30,7 @@ export default function AdminDashboard() {
     }
 
     if (status === 'authenticated') {
-      if ((session.user as User).role !== 'admin') {
+      if ((session.user).role !== 'admin') {
         router.push('/'); // or a dedicated unauthorized page
       }
 
@@ -202,7 +202,7 @@ export default function AdminDashboard() {
                           </div>
                           <Badge variant={
                             worker.verification_status === 'approved' ? 'default' :
-                            worker.verification_status === 'pending' ? 'secondary' : 'destructive'
+                              worker.verification_status === 'pending' ? 'secondary' : 'destructive'
                           }>
                             {worker.verification_status}
                           </Badge>
@@ -215,7 +215,7 @@ export default function AdminDashboard() {
                           <div><strong>Rating:</strong> {worker.rating}/5.0</div>
                           <div><strong>Jobs Completed:</strong> {worker.total_jobs}</div>
                         </div>
-                        
+
                         {worker.verification_status === 'pending' && (
                           <div className="flex space-x-2">
                             <Button size="sm" className="bg-green-600 hover:bg-green-700">
@@ -254,8 +254,8 @@ export default function AdminDashboard() {
                         <div className="flex flex-col items-end space-y-2">
                           <Badge variant={
                             job.status === 'completed' ? 'default' :
-                            job.status === 'in_progress' ? 'secondary' :
-                            job.status === 'assigned' ? 'outline' : 'secondary'
+                              job.status === 'in_progress' ? 'secondary' :
+                                job.status === 'assigned' ? 'outline' : 'secondary'
                           }>
                             {job.status.replace('_', ' ').toUpperCase()}
                           </Badge>
@@ -270,7 +270,7 @@ export default function AdminDashboard() {
                         <div><strong>Workers:</strong> {job.workers_needed}</div>
                         <div><strong>Type:</strong> {job.job_type === 'bidding' ? 'Bidding' : 'Direct Hire'}</div>
                       </div>
-                      
+
                       <div className="flex space-x-2">
                         <Button size="sm" variant="outline">View Details</Button>
                         {job.status === 'posted' && (
@@ -298,7 +298,7 @@ export default function AdminDashboard() {
                         </div>
                         <Badge variant={
                           payment.status === 'completed' ? 'default' :
-                          payment.status === 'pending' ? 'secondary' : 'destructive'
+                            payment.status === 'pending' ? 'secondary' : 'destructive'
                         }>
                           {payment.status.toUpperCase()}
                         </Badge>
@@ -311,7 +311,7 @@ export default function AdminDashboard() {
                         <div><strong>Commission:</strong> ৳{payment.admin_commission.toLocaleString()} ({payment.commission_percentage}%)</div>
                         <div><strong>Payment Type:</strong> {payment.payment_type}</div>
                       </div>
-                      
+
                       {payment.status === 'pending' && payment.payment_type === 'manual' && (
                         <div className="flex space-x-2">
                           <Button size="sm">Mark as Paid</Button>
@@ -346,7 +346,7 @@ export default function AdminDashboard() {
                             <div className="text-2xl font-bold">৳{request.amount.toLocaleString()}</div>
                             <Badge variant={
                               request.status === 'approved' ? 'default' :
-                              request.status === 'pending' ? 'secondary' : 'destructive'
+                                request.status === 'pending' ? 'secondary' : 'destructive'
                             }>
                               {request.status.toUpperCase()}
                             </Badge>
@@ -360,7 +360,7 @@ export default function AdminDashboard() {
                           <div><strong>Worker Balance:</strong> ৳{worker?.balance.toLocaleString()}</div>
                           <div><strong>Request Date:</strong> {new Date(request.created_at).toLocaleDateString()}</div>
                         </div>
-                        
+
                         {request.status === 'pending' && (
                           <div className="flex space-x-2">
                             <Button size="sm" className="bg-green-600 hover:bg-green-700">
@@ -427,7 +427,7 @@ export default function AdminDashboard() {
                       <span className="font-medium">{workers.length}</span>
                     </div>
                     <Progress value={(workers.length / users.length) * 100} />
-                    
+
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Clients</span>
                       <span className="font-medium">{users.filter(u => u.role === 'client').length}</span>
@@ -450,12 +450,12 @@ export default function AdminDashboard() {
                       </div>
                       <div className="text-sm text-gray-500">Total Revenue</div>
                     </div>
-                    
+
                     <div className="flex justify-between text-sm">
                       <span>This Month</span>
                       <span className="font-medium">৳{payments.filter(p => new Date(p.created_at).getMonth() === new Date().getMonth()).reduce((sum, p) => sum + p.admin_commission, 0).toLocaleString()}</span>
                     </div>
-                    
+
                     <div className="flex justify-between text-sm">
                       <span>Average per Job</span>
                       <span className="font-medium">৳{stats.totalJobs > 0 ? Math.round(stats.totalRevenue / stats.totalJobs).toLocaleString() : 0}</span>

@@ -12,7 +12,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Briefcase, Upload, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { Category } from '@/types';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
@@ -57,7 +56,7 @@ export default function RegisterPage() {
   const handleTimeChange = (time, checked) => {
     setFormData(prev => ({
       ...prev,
-      preferredTimes: checked 
+      preferredTimes: checked
         ? [...prev.preferredTimes, time]
         : prev.preferredTimes.filter(t => t !== time)
     }));
@@ -65,7 +64,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!userType) {
       toast.error('Please select a user type');
       return;
@@ -137,13 +136,13 @@ export default function RegisterPage() {
       }
 
       toast.success('Registration successful! Please wait for verification.');
-      
+
       const result = await signIn("credentials", {
         redirect: false,
         email: formData.email,
         password: formData.password,
       });
-  
+
       if (result?.error) {
         toast.error(result.error);
       } else {
@@ -203,8 +202,8 @@ export default function RegisterPage() {
               Register as {userType === 'worker' ? 'Worker' : 'Client'}
             </CardTitle>
             <CardDescription>
-              {userType === 'worker' 
-                ? 'Create your worker profile to start finding jobs' 
+              {userType === 'worker'
+                ? 'Create your worker profile to start finding jobs'
                 : 'Create your client account to hire workers'
               }
             </CardDescription>
@@ -214,7 +213,7 @@ export default function RegisterPage() {
               {/* Basic Information */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Basic Information</h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="name">Full Name *</Label>
@@ -274,7 +273,7 @@ export default function RegisterPage() {
               {userType === 'worker' && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Worker Details</h3>
-                  
+
                   <div>
                     <Label htmlFor="skills">Skills *</Label>
                     <Textarea
@@ -357,19 +356,19 @@ export default function RegisterPage() {
               {userType === 'client' && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Client Agreement</h3>
-                  
+
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <div className="flex items-start space-x-2">
                       <Checkbox
                         id="safety-agreement"
                         checked={formData.safetyAgreement}
-                        onCheckedChange={(checked) => 
+                        onCheckedChange={(checked) =>
                           setFormData(prev => ({ ...prev, safetyAgreement: !!checked }))
                         }
                       />
                       <div className="flex-1">
                         <Label htmlFor="safety-agreement" className="text-sm">
-                          I accept responsibility for worker safety and any damage that may occur during the job. 
+                          I accept responsibility for worker safety and any damage that may occur during the job.
                           I understand that I am liable for providing a safe working environment and proper equipment when necessary.
                         </Label>
                       </div>

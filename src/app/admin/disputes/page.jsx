@@ -12,11 +12,11 @@ import { toast } from 'sonner';
 import { Dispute, Job, User, Worker } from '@/types';
 
 export default function AdminDisputesPage() {
-  const [disputes, setDisputes] = useState<Dispute[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [workers, setWorkers] = useState<Worker[]>([]);
-  const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
+  const [disputes, setDisputes] = useState([]);
+  const [jobs, setJobs] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [workers, setWorkers] = useState([]);
+  const [selectedDispute, setSelectedDispute] = useState(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
 
   useEffect(() => {
@@ -41,12 +41,12 @@ export default function AdminDisputesPage() {
     fetchData();
   }, []);
 
-  const handleResolveDispute = (disputeId: number, resolution: 'client_favor' | 'worker_favor' | 'partial_refund') => {
+  const handleResolveDispute = (disputeId, resolution) => {
     if (!resolutionNotes.trim()) {
       toast.error('Please provide resolution notes');
       return;
     }
-    
+
     toast.success(`Dispute resolved in ${resolution.replace('_', ' ')}`);
     setResolutionNotes('');
     setSelectedDispute(null);
@@ -113,7 +113,7 @@ export default function AdminDisputesPage() {
                           <div><strong>Email:</strong> {client?.email}</div>
                         </div>
                       </div>
-                      
+
                       <div>
                         <h3 className="font-medium mb-2">Worker Information</h3>
                         <div className="space-y-1 text-sm">
@@ -172,23 +172,23 @@ export default function AdminDisputesPage() {
                               </div>
 
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <Button 
+                                <Button
                                   onClick={() => handleResolveDispute(selectedDispute.dispute_id, 'client_favor')}
                                   className="bg-blue-600 hover:bg-blue-700"
                                 >
                                   <CheckCircle className="h-4 w-4 mr-2" />
                                   Client Favor
                                 </Button>
-                                
-                                <Button 
+
+                                <Button
                                   onClick={() => handleResolveDispute(selectedDispute.dispute_id, 'worker_favor')}
                                   className="bg-green-600 hover:bg-green-700"
                                 >
                                   <CheckCircle className="h-4 w-4 mr-2" />
                                   Worker Favor
                                 </Button>
-                                
-                                <Button 
+
+                                <Button
                                   onClick={() => handleResolveDispute(selectedDispute.dispute_id, 'partial_refund')}
                                   className="bg-yellow-600 hover:bg-yellow-700"
                                 >
@@ -213,7 +213,7 @@ export default function AdminDisputesPage() {
                       <Button variant="outline">
                         Contact Client
                       </Button>
-                      
+
                       <Button variant="outline">
                         Contact Worker
                       </Button>

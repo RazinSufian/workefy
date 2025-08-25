@@ -14,13 +14,13 @@ import { toast } from 'sonner';
 import { Worker, User, Category } from '@/types';
 
 export default function AdminWorkersPage() {
-  const [workers, setWorkers] = useState<Worker[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [workers, setWorkers] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
+  const [selectedWorker, setSelectedWorker] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
@@ -50,27 +50,27 @@ export default function AdminWorkersPage() {
     filteredWorkers = filteredWorkers.filter(worker => {
       const user = users.find(u => u.user_id === worker.user_id);
       return worker.skills.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             user?.name.toLowerCase().includes(searchTerm.toLowerCase());
+        user?.name.toLowerCase().includes(searchTerm.toLowerCase());
     });
   }
 
   if (statusFilter) {
-    filteredWorkers = filteredWorkers.filter(worker => 
+    filteredWorkers = filteredWorkers.filter(worker =>
       worker.verification_status === statusFilter
     );
   }
 
   if (categoryFilter) {
-    filteredWorkers = filteredWorkers.filter(worker => 
+    filteredWorkers = filteredWorkers.filter(worker =>
       worker.category_id.toString() === categoryFilter
     );
   }
 
-  const handleApproveWorker = (workerId: number) => {
+  const handleApproveWorker = (workerId) => {
     toast.success('Worker approved successfully!');
   };
 
-  const handleRejectWorker = (workerId: number) => {
+  const handleRejectWorker = (workerId) => {
     if (!rejectionReason.trim()) {
       toast.error('Please provide a rejection reason');
       return;
@@ -80,7 +80,7 @@ export default function AdminWorkersPage() {
     setSelectedWorker(null);
   };
 
-  const handleSuspendWorker = (workerId: number) => {
+  const handleSuspendWorker = (workerId) => {
     toast.success('Worker suspended successfully');
   };
 
@@ -122,7 +122,7 @@ export default function AdminWorkersPage() {
                   className="pl-10"
                 />
               </div>
-              
+
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Verification Status" />
@@ -178,7 +178,7 @@ export default function AdminWorkersPage() {
                     <div className="flex items-center space-x-2">
                       <Badge variant={
                         worker.verification_status === 'approved' ? 'default' :
-                        worker.verification_status === 'pending' ? 'secondary' : 'destructive'
+                          worker.verification_status === 'pending' ? 'secondary' : 'destructive'
                       }>
                         {worker.verification_status}
                       </Badge>
@@ -221,7 +221,7 @@ export default function AdminWorkersPage() {
                                   <div><strong>Address:</strong> {user?.address}</div>
                                 </div>
                               </div>
-                              
+
                               <div>
                                 <h3 className="font-medium mb-2">Work Information</h3>
                                 <div className="space-y-2 text-sm">
@@ -239,7 +239,7 @@ export default function AdminWorkersPage() {
                               <div className="flex items-center space-x-2">
                                 <Badge variant={
                                   selectedWorker.verification_status === 'approved' ? 'default' :
-                                  selectedWorker.verification_status === 'pending' ? 'secondary' : 'destructive'
+                                    selectedWorker.verification_status === 'pending' ? 'secondary' : 'destructive'
                                 }>
                                   {selectedWorker.verification_status}
                                 </Badge>
@@ -254,7 +254,7 @@ export default function AdminWorkersPage() {
 
                             {selectedWorker.verification_status === 'pending' && (
                               <div className="flex space-x-2">
-                                <Button 
+                                <Button
                                   onClick={() => handleApproveWorker(selectedWorker.worker_id)}
                                   className="bg-green-600 hover:bg-green-700"
                                 >
@@ -287,8 +287,8 @@ export default function AdminWorkersPage() {
                                         />
                                       </div>
                                       <div className="flex space-x-2">
-                                        <Button 
-                                          variant="destructive" 
+                                        <Button
+                                          variant="destructive"
                                           onClick={() => handleRejectWorker(selectedWorker.worker_id)}
                                         >
                                           Confirm Rejection
@@ -320,16 +320,16 @@ export default function AdminWorkersPage() {
 
                     {worker.verification_status === 'pending' && (
                       <>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           onClick={() => handleApproveWorker(worker.worker_id)}
                           className="bg-green-600 hover:bg-green-700"
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
                           Approve
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="destructive"
                           onClick={() => setSelectedWorker(worker)}
                         >
