@@ -11,15 +11,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Users, Search, CheckCircle, XCircle, Eye, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { Worker, User, Category } from '@/types';
 
 export default function AdminWorkersPage() {
   const [workers, setWorkers] = useState([]);
   const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(undefined);
+  const [categoryFilter, setCategoryFilter] = useState(undefined);
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
@@ -161,7 +160,7 @@ export default function AdminWorkersPage() {
                   <SelectValue placeholder="Verification Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
@@ -173,7 +172,7 @@ export default function AdminWorkersPage() {
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {categories.map(cat => (
                     <SelectItem key={cat.category_id} value={cat.category_id.toString()}>
                       {cat.name}
@@ -184,8 +183,8 @@ export default function AdminWorkersPage() {
 
               <Button variant="outline" onClick={() => {
                 setSearchTerm('');
-                setStatusFilter('');
-                setCategoryFilter('');
+                setStatusFilter(undefined);
+                setCategoryFilter(undefined);
               }}>
                 Clear Filters
               </Button>
@@ -262,7 +261,7 @@ export default function AdminWorkersPage() {
                                   <div><strong>Category:</strong> {categories.find(c => c.category_id === selectedWorker.category_id)?.name}</div>
                                   <div><strong>Rating:</strong> {selectedWorker.rating}/5.0</div>
                                   <div><strong>Total Jobs:</strong> {selectedWorker.total_jobs}</div>
-                                  <div><strong>Balance:</strong> ৳{selectedWorker.balance.toLocaleString()}</div>
+                                  <div><strong>Balance:</strong> ৳{(selectedWorker.balance || 0).toLocaleString()}</div>
                                 </div>
                               </div>
                             </div>
@@ -375,9 +374,11 @@ export default function AdminWorkersPage() {
                     )}
 
                     {worker.nid_card_url && (
-                      <Button variant="outline" size="sm">
-                        <FileText className="h-4 w-4 mr-2" />
-                        View NID
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={worker.nid_card_url} target="_blank" rel="noopener noreferrer">
+                          <FileText className="h-4 w-4 mr-2" />
+                          View NID
+                        </a>
                       </Button>
                     )}
                   </div>

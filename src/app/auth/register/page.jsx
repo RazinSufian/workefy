@@ -20,6 +20,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [userType, setUserType] = useState('');
   const [categories, setCategories] = useState([]);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -31,6 +32,7 @@ export default function RegisterPage() {
     category: '',
     preferredTimes: [],
     nidFile: null,
+    nidUrl: '', // Store the uploaded file URL
     // Client specific
     safetyAgreement: false
   });
@@ -44,9 +46,12 @@ export default function RegisterPage() {
     const fetchCategories = async () => {
       try {
         const res = await fetch('/api/categories');
-        setCategories(await res.json());
+        const data = await res.json();
+        console.log('Categories fetched:', data); // Debug log
+        setCategories(data);
       } catch (error) {
         console.error("Failed to fetch categories:", error);
+        toast.error('Failed to load categories');
       }
     };
 
@@ -62,81 +67,237 @@ export default function RegisterPage() {
     }));
   };
 
+  const handleFileUpload = async (file) => {
+    if (!file) return null;
+
+    setUploading(true);
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      uploadFormData.append('type', 'nid');
+
+      console.log('Uploading file:', file.name, 'Size:', file.size); // Debug log
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      const data = await response.json();
+      console.log('Upload response:', data); // Debug log
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to upload file');
+      }
+
+      return data.url;
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(`Upload failed: ${error.message}`);
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleNidFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB');
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Only JPEG, PNG, and PDF files are allowed');
+      return;
+    }
+
+    console.log('File selected:', file.name, 'Type:', file.type); // Debug log
+
+    // Set the file in formData first
+    setFormData(prev => ({ ...prev, nidFile: file }));
+
+    // Upload the file
+    const uploadedUrl = await handleFileUpload(file);
+    if (uploadedUrl) {
+      setFormData(prev => ({ ...prev, nidUrl: uploadedUrl }));
+      toast.success('NID card uploaded successfully');
+      console.log('NID URL set:', uploadedUrl); // Debug log
+    } else {
+      // Reset the file if upload failed
+      setFormData(prev => ({ ...prev, nidFile: null, nidUrl: '' }));
+    }
+  };
+
+  const validateForm = () => {
+    if (!userType) {
+      toast.error('Please select a user type');
+      return false;
+    }
+
+    // Basic validation
+    if (!formData.name.trim()) {
+      toast.error('Please enter your full name');
+      return false;
+    }
+
+    if (!formData.email.trim()) {
+      toast.error('Please enter your email');
+      return false;
+    }
+
+    if (!formData.password) {
+      toast.error('Please enter a password');
+      return false;
+    }
+
+    if (!formData.phone.trim()) {
+      toast.error('Please enter your phone number');
+      return false;
+    }
+
+    if (!formData.address.trim()) {
+      toast.error('Please enter your address');
+      return false;
+    }
+
+    // Worker specific validation
+    if (userType === 'worker') {
+      if (!formData.skills.trim()) {
+        toast.error('Please enter your skills');
+        return false;
+      }
+
+      if (!formData.category) {
+        toast.error('Please select a work category');
+        return false;
+      }
+
+      if (formData.preferredTimes.length === 0) {
+        toast.error('Please select at least one preferred working time');
+        return false;
+      }
+
+      if (!formData.nidFile || !formData.nidUrl) {
+        toast.error('Please upload your NID card');
+        return false;
+      }
+    }
+
+    // Client specific validation
+    if (userType === 'client' && !formData.safetyAgreement) {
+      toast.error('Safety agreement must be accepted');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!userType) {
-      toast.error('Please select a user type');
+    if (!validateForm()) {
       return;
     }
 
-    if (userType === 'worker' && !formData.nidFile) {
-      toast.error('NID card upload is required for workers');
-      return;
-    }
-
-    if (userType === 'client' && !formData.safetyAgreement) {
-      toast.error('Safety agreement must be accepted');
-      return;
-    }
+    console.log('Submitting form with data:', {
+      ...formData,
+      nidFile: formData.nidFile ? formData.nidFile.name : null
+    }); // Debug log
 
     try {
       // Step 1: Create the user
+      const userPayload = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        phone: formData.phone.trim(),
+        address: formData.address.trim(),
+        role: userType,
+        agreement_signed: userType === 'client' ? formData.safetyAgreement : false,
+      };
+
+      console.log('Creating user with payload:', userPayload); // Debug log
+
       const userRes = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          phone: formData.phone,
-          address: formData.address,
-          role: userType,
-          agreement_signed: formData.safetyAgreement,
-        }),
+        body: JSON.stringify(userPayload),
       });
 
+      const userData = await userRes.json();
+      console.log('User creation response:', userData); // Debug log
+
       if (!userRes.ok) {
-        throw new Error('Failed to create user');
+        throw new Error(userData.error || 'Failed to create user');
       }
 
-      const userData = await userRes.json();
-      const userId = userData.result.insertId;
+      const userId = userData.result?.insertId || userData.id;
+      if (!userId) {
+        throw new Error('Failed to get user ID from response');
+      }
+
+      console.log('User created with ID:', userId); // Debug log
 
       // Step 2: Create the worker or client profile
       if (userType === 'worker') {
+        const workerPayload = {
+          user_id: userId,
+          skills: formData.skills.trim(),
+          category_id: parseInt(formData.category),
+          preferred_times: formData.preferredTimes.join(', '),
+          nid_card_url: formData.nidUrl,
+          verification_status: 'pending',
+          balance: 0,
+          rating: 0,
+          total_jobs: 0,
+          is_available: true,
+        };
+
+        console.log('Creating worker with payload:', workerPayload); // Debug log
+
         const workerRes = await fetch('/api/workers', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: userId,
-            skills: formData.skills,
-            category_id: formData.category,
-            preferred_times: formData.preferredTimes.join(', '),
-            nid_card_url: '/uploads/placeholder.jpg', // Placeholder for now
-          }),
+          body: JSON.stringify(workerPayload),
         });
 
+        const workerData = await workerRes.json();
+        console.log('Worker creation response:', workerData); // Debug log
+
         if (!workerRes.ok) {
-          throw new Error('Failed to create worker profile');
+          throw new Error(workerData.error || 'Failed to create worker profile');
         }
       } else if (userType === 'client') {
+        const clientPayload = {
+          user_id: userId,
+          safety_agreement_accepted: formData.safetyAgreement,
+        };
+
+        console.log('Creating client with payload:', clientPayload); // Debug log
+
         const clientRes = await fetch('/api/clients', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: userId,
-            safety_agreement_accepted: formData.safetyAgreement,
-          }),
+          body: JSON.stringify(clientPayload),
         });
 
+        const clientData = await clientRes.json();
+        console.log('Client creation response:', clientData); // Debug log
+
         if (!clientRes.ok) {
-          throw new Error('Failed to create client profile');
+          throw new Error(clientData.error || 'Failed to create client profile');
         }
       }
 
-      toast.success('Registration successful! Please wait for verification.');
+      toast.success('Registration successful! Logging you in...');
 
+      // Step 3: Auto login
       const result = await signIn("credentials", {
         redirect: false,
         email: formData.email,
@@ -144,7 +305,9 @@ export default function RegisterPage() {
       });
 
       if (result?.error) {
-        toast.error(result.error);
+        toast.error(`Login failed: ${result.error}`);
+        // Still redirect to login page so user can manually login
+        router.push('/auth/login');
       } else {
         toast.success('Login successful!');
         router.push('/');
@@ -152,7 +315,7 @@ export default function RegisterPage() {
 
     } catch (error) {
       console.error("Registration failed:", error);
-      toast.error('Registration failed. Please try again.');
+      toast.error(`Registration failed: ${error.message}`);
     }
   };
 
@@ -287,7 +450,10 @@ export default function RegisterPage() {
 
                   <div>
                     <Label>Work Category *</Label>
-                    <Select onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select work category" />
                       </SelectTrigger>
@@ -315,6 +481,11 @@ export default function RegisterPage() {
                         </div>
                       ))}
                     </div>
+                    {formData.preferredTimes.length > 0 && (
+                      <p className="text-sm text-green-600 mt-1">
+                        Selected: {formData.preferredTimes.join(', ')}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -325,29 +496,43 @@ export default function RegisterPage() {
                         <div className="mt-4">
                           <Label htmlFor="nid-upload" className="cursor-pointer">
                             <span className="mt-2 block text-sm font-medium text-gray-900">
-                              Click to upload your NID card
+                              {uploading ? 'Uploading...' : 'Click to upload your NID card'}
                             </span>
                             <Input
                               id="nid-upload"
                               type="file"
                               accept="image/*,application/pdf"
                               className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  setFormData(prev => ({ ...prev, nidFile: file }));
-                                }
-                              }}
+                              onChange={handleNidFileChange}
+                              disabled={uploading}
                             />
                           </Label>
                         </div>
                         {formData.nidFile && (
-                          <p className="mt-2 text-sm text-green-600">
-                            File selected: {formData.nidFile.name}
-                          </p>
+                          <div className="mt-2">
+                            <p className="text-sm text-blue-600">
+                              File selected: {formData.nidFile.name}
+                            </p>
+                            {formData.nidUrl && (
+                              <p className="text-sm text-green-600">
+                                ✅ Upload successful - Ready for submission
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {uploading && (
+                          <div className="mt-2">
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">Uploading NID card...</p>
+                          </div>
                         )}
                       </div>
                     </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Supported formats: JPEG, PNG, PDF. Max size: 5MB
+                    </p>
                   </div>
                 </div>
               )}
@@ -377,8 +562,16 @@ export default function RegisterPage() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full" size="lg">
-                Create {userType === 'worker' ? 'Worker' : 'Client'} Account
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={uploading}
+              >
+                {uploading
+                  ? 'Uploading...'
+                  : `Create ${userType === 'worker' ? 'Worker' : 'Client'} Account`
+                }
               </Button>
             </form>
 
