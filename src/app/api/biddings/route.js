@@ -3,10 +3,21 @@ import { NextResponse } from "next/server";
 import dbConnection from "@/lib/dbConnect";
 
 // ->> /api/biddings
-export async function GET() {
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const jobId = searchParams.get('job_id');
+
   try {
     const conn = await dbConnection();
-    const [rows] = await conn.query("SELECT * FROM biddings");
+    let query = "SELECT b.*, u.name as worker_name FROM biddings b JOIN workers w ON b.worker_id = w.worker_id JOIN users u ON w.user_id = u.user_id";
+    const params = [];
+
+    if (jobId) {
+      query += " WHERE b.job_id = ?";
+      params.push(jobId);
+    }
+
+    const [rows] = await conn.query(query, params);
     return NextResponse.json(rows);
   } catch (error) {
     console.error(error);

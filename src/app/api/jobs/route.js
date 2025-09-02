@@ -2,10 +2,21 @@ import { NextResponse } from "next/server";
 import dbConnection from "@/lib/dbConnect";
 
 // ->> /api/jobs
-export async function GET() {
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const clientId = searchParams.get('client_id');
+
   try {
     const conn = await dbConnection();
-    const [rows] = await conn.query("SELECT * FROM jobs");
+    let query = "SELECT * FROM jobs";
+    const params = [];
+
+    if (clientId) {
+      query += " WHERE client_id = ?";
+      params.push(clientId);
+    }
+
+    const [rows] = await conn.query(query, params);
     return NextResponse.json(rows);
   } catch (error) {
     console.error(error);

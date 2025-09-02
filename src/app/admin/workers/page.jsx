@@ -66,18 +66,51 @@ export default function AdminWorkersPage() {
     );
   }
 
-  const handleApproveWorker = (workerId) => {
-    toast.success('Worker approved successfully!');
+  const handleApproveWorker = async (workerId) => {
+    try {
+      const res = await fetch(`/api/workers/${workerId}/verify`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verification_status: 'approved' }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to approve worker');
+      }
+
+      setWorkers(workers.map(w => w.worker_id === workerId ? { ...w, verification_status: 'approved' } : w));
+      toast.success('Worker approved successfully!');
+    } catch (error) {
+      console.error("Failed to approve worker:", error);
+      toast.error('Failed to approve worker. Please try again.');
+    }
   };
 
-  const handleRejectWorker = (workerId) => {
+  const handleRejectWorker = async (workerId) => {
     if (!rejectionReason.trim()) {
       toast.error('Please provide a rejection reason');
       return;
     }
-    toast.success('Worker rejected with reason provided');
-    setRejectionReason('');
-    setSelectedWorker(null);
+
+    try {
+      const res = await fetch(`/api/workers/${workerId}/verify`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verification_status: 'rejected', rejection_reason: rejectionReason }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to reject worker');
+      }
+
+      setWorkers(workers.map(w => w.worker_id === workerId ? { ...w, verification_status: 'rejected' } : w));
+      toast.success('Worker rejected with reason provided');
+      setRejectionReason('');
+      setSelectedWorker(null);
+    } catch (error) {
+      console.error("Failed to reject worker:", error);
+      toast.error('Failed to reject worker. Please try again.');
+    }
   };
 
   const handleSuspendWorker = (workerId) => {
@@ -244,9 +277,11 @@ export default function AdminWorkersPage() {
                                   {selectedWorker.verification_status}
                                 </Badge>
                                 {selectedWorker.nid_card_url && (
-                                  <Button variant="outline" size="sm">
-                                    <FileText className="h-4 w-4 mr-2" />
-                                    View NID
+                                  <Button variant="outline" size="sm" asChild>
+                                    <a href={selectedWorker.nid_card_url} target="_blank" rel="noopener noreferrer">
+                                      <FileText className="h-4 w-4 mr-2" />
+                                      View NID
+                                    </a>
                                   </Button>
                                 )}
                               </div>

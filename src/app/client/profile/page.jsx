@@ -1,31 +1,20 @@
 'use client';
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, User, Save, Camera, Upload } from 'lucide-react';
-import { toast } from 'sonner';
-import { User, Client } from '@/types';
+import { User, Camera, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default function ClientProfilePage() {
+  const router = useRouter();
   const [currentUser, setCurrentUser] = useState(null);
   const [clientData, setClientData] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    company: 'Tech Solutions Ltd.', // This field is not in the database
-    bio: 'Looking for reliable workers for various projects. We value quality work and timely completion.', // This field is not in the database
-    profileImage: null,
-    emailNotifications: true,
-    smsNotifications: false
-  });
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [smsNotifications, setSmsNotifications] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -41,14 +30,6 @@ export default function ClientProfilePage() {
           const allClients = await clientsRes.json();
           const currentClient = allClients.find((c) => c.user_id === clientUser.user_id);
           setClientData(currentClient);
-
-          setFormData(prev => ({
-            ...prev,
-            name: clientUser.name,
-            email: clientUser.email,
-            phone: clientUser.phone,
-            address: clientUser.address,
-          }));
         }
       } catch (error) {
         console.error("Failed to fetch client profile data:", error);
@@ -57,39 +38,6 @@ export default function ClientProfilePage() {
 
     fetchData();
   }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!currentUser || !clientData) {
-      toast.error('Could not identify client account.');
-      return;
-    }
-
-    try {
-      const userRes = await fetch(`/api/users/${currentUser.user_id}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            address: formData.address,
-          }),
-        }
-      );
-
-      if (!userRes.ok) {
-        throw new Error('Failed to update user profile');
-      }
-
-      toast.success('Profile updated successfully!');
-    } catch (error) {
-      console.error("Failed to update profile:", error);
-      toast.error('Failed to update profile. Please try again.');
-    }
-  };
 
   if (!currentUser || !clientData) {
     return <div>Loading...</div>; // Or a proper loading skeleton
@@ -100,58 +48,36 @@ export default function ClientProfilePage() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Button variant="ghost" asChild className="mr-4">
-              <Link href="/client/dashboard">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Link>
+          <div className="flex items-center justify-between h-16">
+            <Button variant="ghost" onClick={() => router.back()} className="mr-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
             </Button>
             <div className="flex items-center space-x-2">
               <User className="h-6 w-6 text-blue-600" />
-              <h1 className="text-xl font-bold">Edit Profile</h1>
+              <h1 className="text-xl font-bold">Client Profile</h1>
             </div>
+            <Button asChild>
+              <Link href="/client/profile/edit">Edit Profile</Link>
+            </Button>
           </div>
         </div>
       </header>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-4xl mx-auto">
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="space-y-8">
             {/* Profile Picture */}
             <Card>
               <CardHeader>
                 <CardTitle>Profile Picture</CardTitle>
-                <CardDescription>Upload a professional photo to build trust with workers</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center space-x-6">
                   <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center">
                     <Camera className="h-8 w-8 text-gray-400" />
                   </div>
-                  <div>
-                    <Label htmlFor="profile-upload" className="cursor-pointer">
-                      <Button type="button" variant="outline" asChild>
-                        <span>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Photo
-                        </span>
-                      </Button>
-                      <Input
-                        id="profile-upload"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setFormData(prev => ({ ...prev, profileImage: file }));
-                          }
-                        }}
-                      />
-                    </Label>
-                    <p className="text-sm text-gray-500 mt-2">JPG, PNG up to 5MB</p>
-                  </div>
+                  <p className="text-sm text-gray-500 mt-2">JPG, PNG up to 5MB</p>
                 </div>
               </CardContent>
             </Card>
@@ -160,67 +86,38 @@ export default function ClientProfilePage() {
             <Card>
               <CardHeader>
                 <CardTitle>Basic Information</CardTitle>
-                <CardDescription>Update your personal and contact details</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    />
+                    <Label>Full Name</Label>
+                    <p>{currentUser.name}</p>
                   </div>
                   <div>
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    />
+                    <Label>Email Address</Label>
+                    <p>{currentUser.email}</p>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    />
+                    <Label>Phone Number</Label>
+                    <p>{currentUser.phone}</p>
                   </div>
                   <div>
-                    <Label htmlFor="company">Company (Optional)</Label>
-                    <Input
-                      id="company"
-                      value={formData.company}
-                      onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
-                      placeholder="Your company name"
-                    />
+                    <Label>Company (Optional)</Label>
+                    <p>Tech Solutions Ltd.</p>
                   </div>
                 </div>
                 
                 <div>
-                  <Label htmlFor="address">Address</Label>
-                  <Textarea
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                  />
+                  <Label>Address</Label>
+                  <p>{currentUser.address}</p>
                 </div>
 
                 <div>
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea
-                    id="bio"
-                    value={formData.bio}
-                    onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-                    placeholder="Tell workers about yourself and your projects..."
-                    rows={3}
-                  />
+                  <Label>Bio</Label>
+                  <p>Looking for reliable workers for various projects. We value quality work and timely completion.</p>
                 </div>
               </CardContent>
             </Card>
@@ -229,7 +126,6 @@ export default function ClientProfilePage() {
             <Card>
               <CardHeader>
                 <CardTitle>Account Statistics</CardTitle>
-                <CardDescription>Your activity summary</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -253,7 +149,6 @@ export default function ClientProfilePage() {
             <Card>
               <CardHeader>
                 <CardTitle>Safety Agreement</CardTitle>
-                <CardDescription>Your commitment to worker safety</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
@@ -272,7 +167,6 @@ export default function ClientProfilePage() {
             <Card>
               <CardHeader>
                 <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>Manage how you receive updates</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -282,8 +176,8 @@ export default function ClientProfilePage() {
                   </div>
                   <Switch
                     id="email-notifications"
-                    checked={formData.emailNotifications}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, emailNotifications: checked }))}
+                    checked={emailNotifications}
+                    onCheckedChange={setEmailNotifications}
                   />
                 </div>
 
@@ -294,8 +188,8 @@ export default function ClientProfilePage() {
                   </div>
                   <Switch
                     id="sms-notifications"
-                    checked={formData.smsNotifications}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, smsNotifications: checked }))}
+                    checked={smsNotifications}
+                    onCheckedChange={setSmsNotifications}
                   />
                 </div>
               </CardContent>
@@ -305,7 +199,6 @@ export default function ClientProfilePage() {
             <Card>
               <CardHeader>
                 <CardTitle>Payment Information</CardTitle>
-                <CardDescription>Manage your payment methods</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -324,18 +217,7 @@ export default function ClientProfilePage() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Action Buttons */}
-            <div className="flex space-x-4">
-              <Button type="submit" className="flex-1">
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </Button>
-              <Button type="button" variant="outline" asChild>
-                <Link href="/client/dashboard">Cancel</Link>
-              </Button>
-            </div>
-          </form>
+          </div>
         </div>
       </div>
     </div>
