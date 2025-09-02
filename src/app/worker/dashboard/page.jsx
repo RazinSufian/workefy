@@ -103,6 +103,9 @@ export default function WorkerDashboard() {
               <Badge variant={workerData?.verification_status === 'approved' ? 'default' : 'secondary'}>
                 {workerData?.verification_status === 'approved' ? 'Verified' : 'Pending Verification'}
               </Badge>
+              <Link href="/worker/profile" className="text-gray-500 hover:text-gray-700">
+                <User className="h-6 w-6" />
+              </Link>
               <Button variant="ghost" size="sm" onClick={() => signOut()}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout

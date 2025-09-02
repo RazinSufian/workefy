@@ -87,10 +87,10 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
+              <Link href="/admin/workers" className="flex items-center space-x-2">
+                <Settings className="h-4 w-4" />
+                <span>Workers</span>
+              </Link>
               <Button variant="ghost" size="sm" onClick={() => signOut()}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
@@ -246,7 +246,7 @@ export default function AdminDashboard() {
                 <Link href="/admin/categories">Manage Categories</Link>
               </Button>
             </div>
-            </TabsContent>
+          </TabsContent>
 
           <TabsContent value="jobs" className="space-y-6">
             <div>

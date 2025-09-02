@@ -93,6 +93,12 @@ export default function ClientDashboard() {
                   Post Job
                 </Link>
               </Button>
+              <Link href="/client/profile">
+                <Button variant="ghost" size="sm">
+                  <Users className="h-4 w-4 mr-2" />
+                  Profile
+                </Button>
+              </Link>
               <Button variant="ghost" size="sm" onClick={() => signOut()}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
