@@ -21,14 +21,30 @@ const Navbar = () => {
                 </Link>
               )}
               {session.user.role === 'worker' && (
-                <Link href="/worker/dashboard" className="text-gray-300 hover:text-white">
-                  Worker Dashboard
-                </Link>
+                <>
+                  <Link href="/worker/dashboard" className="text-gray-300 hover:text-white">
+                    Dashboard
+                  </Link>
+                  <Link href="/worker/jobs" className="text-gray-300 hover:text-white">
+                    Find Work
+                  </Link>
+                  <Link href="/worker/bids" className="text-gray-300 hover:text-white">
+                    My Bids
+                  </Link>
+                  <Link href="/worker/profile" className="text-gray-300 hover:text-white">
+                    Profile
+                  </Link>
+                </>
               )}
               {session.user.role === 'client' && (
-                <Link href="/client/dashboard" className="text-gray-300 hover:text-white">
-                  Client Dashboard
-                </Link>
+                <>
+                  <Link href="/client/dashboard" className="text-gray-300 hover:text-white">
+                    Client Dashboard
+                  </Link>
+                  <Link href="/client/profile" className="text-gray-300 hover:text-white">
+                    Profile
+                  </Link>
+                </>
               )}
               <button onClick={() => signOut()} className="text-gray-300 hover:text-white">
                 Logout

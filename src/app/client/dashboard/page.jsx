@@ -22,6 +22,7 @@ export default function ClientDashboard() {
   const [biddings, setBiddings] = useState([]);
   const [workers, setWorkers] = useState([]);
   const [reviews, setReviews] = useState([]);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -35,12 +36,13 @@ export default function ClientDashboard() {
       const fetchData = async () => {
         try {
           if (user) {
-            const [clientsRes, jobsRes, biddingsRes, workersRes, reviewsRes] = await Promise.all([
+            const [clientsRes, jobsRes, biddingsRes, workersRes, reviewsRes, usersRes] = await Promise.all([
               fetch(`/api/clients?userId=${user.id}`),
               fetch('/api/jobs'),
               fetch('/api/biddings'),
               fetch('/api/workers'),
               fetch('/api/reviews'),
+              fetch('/api/users'),
             ]);
 
             const client = await clientsRes.json();
@@ -52,6 +54,7 @@ export default function ClientDashboard() {
             setBiddings(await biddingsRes.json());
             setWorkers(await workersRes.json());
             setReviews(await reviewsRes.json());
+            setUsers(await usersRes.json());
           }
         } catch (error) {
           console.error("Failed to fetch client dashboard data:", error);
@@ -66,7 +69,7 @@ export default function ClientDashboard() {
     totalJobs: clientData?.total_jobs_posted || 0,
     activeJobs: clientJobs.filter(job => ['posted', 'assigned', 'in_progress'].includes(job.status)).length,
     completedJobs: clientJobs.filter(job => job.status === 'completed').length,
-    totalSpent: clientJobs.reduce((sum, job) => sum + job.budget, 0)
+    totalSpent: clientJobs.filter(job => job.status === 'completed').reduce((sum, job) => sum + parseFloat(job.budget), 0)
   };
 
   if (status === 'loading' || !currentUser || !clientData) {
@@ -75,38 +78,7 @@ export default function ClientDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Briefcase className="h-8 w-8 text-blue-600" />
-              <div>
-                <h1 className="text-xl font-bold">Client Dashboard</h1>
-                <p className="text-sm text-gray-500">Welcome back, {currentUser.name}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button asChild>
-                <Link href="/client/post-job">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Post Job
-                </Link>
-              </Button>
-              <Link href="/client/profile">
-                <Button variant="ghost" size="sm">
-                  <Users className="h-4 w-4 mr-2" />
-                  Profile
-                </Button>
-              </Link>
-              <Button variant="ghost" size="sm" onClick={() => signOut()}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
@@ -160,7 +132,7 @@ export default function ClientDashboard() {
         <Tabs defaultValue="jobs" className="space-y-6">
           <TabsList>
             <TabsTrigger value="jobs">My Jobs</TabsTrigger>
-            <TabsTrigger value="workers">Find Workers</TabsTrigger>
+            
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
           </TabsList>
 
@@ -250,9 +222,11 @@ export default function ClientDashboard() {
                       )}
 
                       <div className="flex space-x-2 mt-4">
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Details
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/client/jobs/${job.job_id}`}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </Link>
                         </Button>
                         {job.status === 'posted' && jobBiddings.length > 0 && (
                           <Button size="sm">Review Bids</Button>
@@ -265,51 +239,7 @@ export default function ClientDashboard() {
             </div>
           </TabsContent>
 
-          <TabsContent value="workers" className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-4">Available Workers</h2>
-              <div className="mb-4">
-                <Button asChild>
-                  <Link href="/client/workers">
-                    <Search className="h-4 w-4 mr-2" />
-                    Advanced Search
-                  </Link>
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {workers.filter(w => w.verification_status === 'approved' && w.is_available).map(worker => {
-                  const workerUser = users.find(u => u.user_id === worker.user_id);
-                  return (
-                    <Card key={worker.worker_id}>
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-lg">{workerUser?.name}</CardTitle>
-                            <CardDescription>{worker.skills}</CardDescription>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                            <span className="text-sm font-medium">{worker.rating}</span>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2 text-sm mb-4">
-                          <div><strong>Category:</strong> {worker.category_id === 1 ? 'Indoor' : 'Outdoor'}</div>
-                          <div><strong>Jobs Completed:</strong> {worker.total_jobs}</div>
-                          <div><strong>Location:</strong> {workerUser?.address}</div>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button size="sm" className="flex-1">Hire Directly</Button>
-                          <Button size="sm" variant="outline">View Profile</Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          </TabsContent>
+          
 
           <TabsContent value="reviews" className="space-y-6">
             <Card>

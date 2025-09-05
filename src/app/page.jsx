@@ -31,7 +31,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b">
+      {/* <nav className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center space-x-2">
@@ -48,7 +48,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-      </nav>
+      </nav> */}
 
       {/* Hero Section */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -57,7 +57,7 @@ export default function HomePage() {
             Connect with <span className="text-blue-600">Skilled Workers</span>
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            The most trusted platform for finding reliable workers and quality job opportunities. 
+            The most trusted platform for finding reliable workers and quality job opportunities.
             Join thousands of satisfied clients and verified professionals.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

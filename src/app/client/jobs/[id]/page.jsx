@@ -1,49 +1,68 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, User, Check, X } from 'lucide-react';
+import { ArrowLeft, User, DollarSign, Check, Star } from 'lucide-react';
 import { toast } from 'sonner';
+import { Textarea } from '@/components/ui/textarea';
+import { useSession } from 'next-auth/react';
 
 export default function JobDetailsPage() {
+  const router = useRouter();
   const params = useParams();
   const { id } = params;
+  const { data: session } = useSession();
   const [job, setJob] = useState(null);
   const [bids, setBids] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [workers, setWorkers] = useState([]);
+  const [assignedWorker, setAssignedWorker] = useState(null);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
 
   useEffect(() => {
     if (id) {
-      const fetchJobDetails = async () => {
+      const fetchData = async () => {
         try {
-          const jobRes = await fetch(`/api/jobs/${id}`);
+          const [jobRes, bidsRes, usersRes, workersRes, jobAssignmentsRes] = await Promise.all([
+            fetch(`/api/jobs/${id}`),
+            fetch(`/api/biddings?job_id=${id}`),
+            fetch('/api/users'),
+            fetch('/api/workers'),
+            fetch(`/api/job-assignments?job_id=${id}`),
+          ]);
+
           const jobData = await jobRes.json();
-          setJob(jobData[0]);
+          const bidsData = await bidsRes.json();
+          const usersData = await usersRes.json();
+          const workersData = await workersRes.json();
+          const jobAssignmentsData = await jobAssignmentsRes.json();
+
+          setJob(jobData);
+          console.log('Job Status:', jobData.status); // Log the job status
+          setBids(bidsData);
+          setUsers(usersData);
+          setWorkers(workersData);
+
+          if (jobAssignmentsData.length > 0) {
+            const worker = workersData.find(w => w.worker_id === jobAssignmentsData[0].worker_id);
+            const user = usersData.find(u => u.user_id === worker?.user_id);
+            setAssignedWorker({ worker, user });
+          }
         } catch (error) {
           console.error("Failed to fetch job details:", error);
         }
       };
 
-      const fetchBids = async () => {
-        try {
-          const bidsRes = await fetch(`/api/bids?job_id=${id}`);
-          const bidsData = await bidsRes.json();
-          setBids(bidsData);
-        } catch (error) {
-          console.error("Failed to fetch bids:", error);
-        }
-      };
-
-      fetchJobDetails();
-      fetchBids();
+      fetchData();
     }
   }, [id]);
 
   const handleAcceptBid = async (bidId) => {
     try {
-      const res = await fetch(`/api/bids/${bidId}/accept`, {
+      const res = await fetch(`/api/biddings/${bidId}/accept`, {
         method: 'PUT',
       });
 
@@ -51,29 +70,66 @@ export default function JobDetailsPage() {
         throw new Error('Failed to accept bid');
       }
 
-      setBids(bids.map(b => b.bid_id === bidId ? { ...b, status: 'accepted' } : b));
       toast.success('Bid accepted successfully!');
+      router.push('/client/dashboard');
     } catch (error) {
       console.error("Failed to accept bid:", error);
       toast.error('Failed to accept bid. Please try again.');
     }
   };
 
-  const handleRejectBid = async (bidId) => {
+  const handleMarkAsComplete = async () => {
     try {
-      const res = await fetch(`/api/bids/${bidId}/reject`, {
+      const res = await fetch(`/api/jobs/${id}/complete`, {
         method: 'PUT',
       });
 
       if (!res.ok) {
-        throw new Error('Failed to reject bid');
+        throw new Error('Failed to mark job as complete');
       }
 
-      setBids(bids.map(b => b.bid_id === bidId ? { ...b, status: 'rejected' } : b));
-      toast.success('Bid rejected successfully!');
+      toast.success('Job marked as complete successfully!');
+      // a bit of delay to allow the server to process the request
+      setTimeout(() => {
+        router.push('/client/dashboard');
+      }, 1000);
     } catch (error) {
-      console.error("Failed to reject bid:", error);
-      toast.error('Failed to reject bid. Please try again.');
+      console.error("Failed to mark job as complete:", error);
+      toast.error('Failed to mark job as complete. Please try again.');
+    }
+  };
+
+  const handleReviewSubmit = async () => {
+    if (rating === 0) {
+      toast.error('Please select a rating.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          job_id: id,
+          reviewer_id: session.user.id,
+          reviewee_id: assignedWorker.user.user_id,
+          rating,
+          comment,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to submit review');
+      }
+
+      toast.success('Review submitted successfully!');
+      setRating(0);
+      setComment('');
+    } catch (error) {
+      console.error("Failed to submit review:", error);
+      toast.error('Failed to submit review. Please try again.');
     }
   };
 
@@ -85,93 +141,107 @@ export default function JobDetailsPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Button variant="ghost" asChild className="mr-4">
-              <Link href="/client/jobs">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Jobs
-              </Link>
+          <div className="flex items-center h-16">
+            <Button variant="ghost" onClick={() => router.back()} className="mr-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
             </Button>
             <h1 className="text-xl font-bold">Job Details</h1>
-            <div></div>
           </div>
         </div>
       </header>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="md:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>{job.title}</CardTitle>
-                <CardDescription>{job.location}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 mb-4">{job.description}</p>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><strong>Budget:</strong> ৳{job.budget}</div>
-                  <div><strong>Workers Needed:</strong> {job.workers_needed}</div>
-                  <div><strong>Job Type:</strong> {job.job_type}</div>
-                  <div><strong>Status:</strong> <Badge variant={job.status === 'posted' ? 'secondary' : 'default'}>{job.status}</Badge></div>
+        <Card>
+          <CardHeader>
+            <CardTitle>{job.title}</CardTitle>
+            <CardDescription>{job.description}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {job.status === 'completed' && assignedWorker && (
+              <div className="my-4">
+                <h3 className="font-medium mb-2">Leave a Review for {assignedWorker.user?.name}</h3>
+                <div className="flex items-center space-x-1 mb-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`h-6 w-6 cursor-pointer ${rating >= star ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                      onClick={() => setRating(star)}
+                    />
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
+                <Textarea
+                  placeholder="Write your review here..."
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  className="mb-2"
+                />
+                <Button onClick={handleReviewSubmit}>Submit Review</Button>
+              </div>
+            )}
 
-            <h2 className="text-2xl font-bold mt-8 mb-4">Bids</h2>
-            <div className="space-y-4">
-              {bids.map(bid => (
-                <Card key={bid.bid_id}>
-                  <CardContent className="p-4 flex justify-between items-center">
-                    <div>
-                      <p className="font-semibold">{bid.worker_name}</p>
-                      <p className="text-sm text-gray-600">Bid Amount: ৳{bid.bid_amount}</p>
-                      <p className="text-sm text-gray-500 mt-2">{bid.message}</p>
-                    </div>
-                    <div className="flex space-x-2">
-                      {bid.status === 'pending' && (
-                        <>
-                          <Button size="sm" onClick={() => handleAcceptBid(bid.bid_id)}>
-                            <Check className="h-4 w-4 mr-2" />
-                            Accept
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleRejectBid(bid.bid_id)}>
-                            <X className="h-4 w-4 mr-2" />
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                      {bid.status !== 'pending' && (
-                        <Badge variant={bid.status === 'accepted' ? 'default' : 'destructive'}>{bid.status}</Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {bids.length === 0 && (
-                <p>No bids yet.</p>
-              )}
-            </div>
-          </div>
-
-          <div className="md:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Client Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                    <User className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">{job.client_name}</p>
-                    <p className="text-sm text-gray-500">Member Since {new Date(job.client_created_at).getFullYear()}</p>
+            {job.job_type === 'bidding' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-medium mb-2">Bids</h3>
+                  <div className="space-y-4">
+                    {bids.map(bid => {
+                      const worker = workers.find(w => w.worker_id === bid.worker_id);
+                      const user = users.find(u => u.user_id === worker?.user_id);
+                      return (
+                        <Card key={bid.bid_id}>
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="flex items-center space-x-2">
+                                  <User className="h-4 w-4 text-gray-400" />
+                                  <span>{user?.name}</span>
+                                </div>
+                                <div className="flex items-center space-x-2 mt-2">
+                                  <DollarSign className="h-4 w-4 text-gray-400" />
+                                  <span>{bid.bid_amount}</span>
+                                </div>
+                              </div>
+                              {job.status === 'posted' && (
+                                <Button size="sm" onClick={() => handleAcceptBid(bid.bid_id)}>
+                                  <Check className="h-4 w-4 mr-2" />
+                                  Accept Bid
+                                </Button>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              </div>
+            ) : (
+              <div>
+                <h3 className="font-medium mb-2">Assigned Worker</h3>
+                {assignedWorker ? (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <User className="h-4 w-4 text-gray-400" />
+                            <span>{assignedWorker.user?.name}</span>
+                          </div>
+                        </div>
+                        {(job.status === 'in_progress' || job.status === 'assigned') && (
+                          <Button onClick={handleMarkAsComplete}>Mark as Complete</Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <p>No worker assigned yet.</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

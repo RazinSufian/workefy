@@ -4,11 +4,22 @@ import dbConnection from "@/lib/dbConnect";
 import bcrypt from "bcryptjs";
 
 // ->> /api/users
-export async function GET() {
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const workerId = searchParams.get('workerId');
+
   try {
     const conn = await dbConnection();
-    const [rows] = await conn.query("SELECT * FROM users");
-    return NextResponse.json(rows);
+    if (workerId) {
+      const [rows] = await conn.query("SELECT u.* FROM users u JOIN workers w ON u.user_id = w.user_id WHERE w.worker_id = ?", [workerId]);
+      if (rows.length === 0) {
+        return NextResponse.json({ message: "User not found" }, { status: 404 });
+      }
+      return NextResponse.json(rows[0]);
+    } else {
+      const [rows] = await conn.query("SELECT * FROM users");
+      return NextResponse.json(rows);
+    }
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: "Cannot get users" }, { status: 500 });

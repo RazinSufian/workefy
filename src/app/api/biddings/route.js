@@ -9,7 +9,7 @@ export async function GET(request) {
 
   try {
     const conn = await dbConnection();
-    let query = "SELECT b.*, u.name as worker_name FROM biddings b JOIN workers w ON b.worker_id = w.worker_id JOIN users u ON w.user_id = u.user_id";
+    let query = "SELECT b.*, u.name as worker_name, w.user_id FROM biddings b JOIN workers w ON b.worker_id = w.worker_id JOIN users u ON w.user_id = u.user_id";
     const params = [];
 
     if (jobId) {

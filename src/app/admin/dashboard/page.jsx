@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -22,6 +23,28 @@ export default function AdminDashboard() {
   const [payments, setPayments] = useState([]);
   const [cashoutRequests, setCashoutRequests] = useState([]);
   const [disputes, setDisputes] = useState([]);
+  const [revenue, setRevenue] = useState([]);
+
+  const handleCancelJob = async (jobId) => {
+    try {
+      const res = await fetch(`/api/jobs/${jobId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled' }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to cancel job');
+      }
+
+      toast.success('Job cancelled successfully!');
+      // Update the local state to reflect the change
+      setJobs(jobs.map(j => j.job_id === jobId ? { ...j, status: 'cancelled' } : j));
+
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -35,13 +58,14 @@ export default function AdminDashboard() {
 
       const fetchData = async () => {
         try {
-          const [usersRes, workersRes, jobsRes, paymentsRes, cashoutRequestsRes, disputesRes] = await Promise.all([
+          const [usersRes, workersRes, jobsRes, paymentsRes, cashoutRequestsRes, disputesRes, revenueRes] = await Promise.all([
             fetch('/api/users'),
             fetch('/api/workers'),
             fetch('/api/jobs'),
             fetch('/api/payments'),
             fetch('/api/cashout-requests'),
             fetch('/api/disputes'),
+            fetch('/api/admin/revenue'),
           ]);
 
           setUsers(await usersRes.json());
@@ -50,6 +74,7 @@ export default function AdminDashboard() {
           setPayments(await paymentsRes.json());
           setCashoutRequests(await cashoutRequestsRes.json());
           setDisputes(await disputesRes.json());
+          setRevenue(await revenueRes.json());
         } catch (error) {
           console.error("Failed to fetch dashboard data:", error);
         }
@@ -65,7 +90,8 @@ export default function AdminDashboard() {
     pendingVerifications: workers.filter(w => w.verification_status === 'pending').length,
     totalJobs: jobs.length,
     activeJobs: jobs.filter(j => ['posted', 'assigned', 'in_progress'].includes(j.status)).length,
-    totalRevenue: payments.reduce((sum, p) => sum + p.admin_commission, 0),
+    // Fixed: Convert commission_amount to number before summing
+    totalRevenue: revenue.reduce((sum, r) => sum + parseFloat(r.commission_amount || 0), 0),
     pendingCashouts: cashoutRequests.filter(cr => cr.status === 'pending').length
   };
 
@@ -75,31 +101,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Shield className="h-8 w-8 text-purple-600" />
-              <div>
-                <h1 className="text-xl font-bold">Admin Dashboard</h1>
-                <p className="text-sm text-gray-500">Platform Management</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/admin/workers" className="flex items-center space-x-2">
-                <Settings className="h-4 w-4" />
-                <span>Workers</span>
-              </Link>
-              <Button variant="ghost" size="sm" onClick={() => signOut()}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -177,12 +178,41 @@ export default function AdminDashboard() {
           <TabsList>
             <TabsTrigger value="verifications">Worker Verifications</TabsTrigger>
             <TabsTrigger value="jobs">Job Management</TabsTrigger>
-            <TabsTrigger value="payments">Payments</TabsTrigger>
+            {/* <TabsTrigger value="payments">Payments</TabsTrigger> */}
             <TabsTrigger value="cashouts">Cashout Requests</TabsTrigger>
-            <TabsTrigger value="disputes">Disputes</TabsTrigger>
-            <TabsTrigger value="categories">Categories</TabsTrigger>
+            {/* <TabsTrigger value="disputes">Disputes</TabsTrigger> */}
+            <TabsTrigger value="categories">Categories & Skills</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="revenue">Revenue</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="revenue">
+            <h2 className="text-2xl font-bold mb-4">Admin Revenue</h2>
+            <Card>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Revenue ID</TableHead>
+                      <TableHead>Job Title</TableHead>
+                      <TableHead>Commission Amount</TableHead>
+                      <TableHead>Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {revenue.map((r) => (
+                      <TableRow key={r.revenue_id}>
+                        <TableCell>{r.revenue_id}</TableCell>
+                        <TableCell>{r.job_title}</TableCell>
+                        <TableCell>৳{parseFloat(r.commission_amount || 0).toLocaleString()}</TableCell>
+                        <TableCell>{new Date(r.created_at).toLocaleDateString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="verifications" className="space-y-6">
             <div>
@@ -246,6 +276,12 @@ export default function AdminDashboard() {
                 <Link href="/admin/categories">Manage Categories</Link>
               </Button>
             </div>
+            {/* <div className="flex justify-between items-center mt-4">
+              <h2 className="text-2xl font-bold">Skills</h2>
+              <Button asChild>
+                <Link href="/admin/skills">Manage Skills</Link>
+              </Button>
+            </div> */}
           </TabsContent>
 
           <TabsContent value="jobs" className="space-y-6">
@@ -268,7 +304,7 @@ export default function AdminDashboard() {
                           }>
                             {job.status.replace('_', ' ').toUpperCase()}
                           </Badge>
-                          <div className="text-sm font-bold">৳{job.budget.toLocaleString()}</div>
+                          <div className="text-sm font-bold">৳{parseFloat(job.budget || 0).toLocaleString()}</div>
                         </div>
                       </div>
                     </CardHeader>
@@ -281,7 +317,12 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">View Details</Button>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={`/admin/jobs/${job.job_id}`}>View Details</Link>
+                        </Button>
+                        {!['completed', 'cancelled'].includes(job.status) && (
+                          <Button size="sm" variant="destructive" onClick={() => handleCancelJob(job.job_id)}>Cancel Job</Button>
+                        )}
                         {job.status === 'posted' && (
                           <Button size="sm">Manage</Button>
                         )}
@@ -315,9 +356,9 @@ export default function AdminDashboard() {
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm mb-4">
-                        <div><strong>Total Amount:</strong> ৳{payment.total_amount.toLocaleString()}</div>
-                        <div><strong>Worker Amount:</strong> ৳{payment.worker_amount.toLocaleString()}</div>
-                        <div><strong>Commission:</strong> ৳{payment.admin_commission.toLocaleString()} ({payment.commission_percentage}%)</div>
+                        <div><strong>Total Amount:</strong> ৳{parseFloat(payment.total_amount || 0).toLocaleString()}</div>
+                        <div><strong>Worker Amount:</strong> ৳{parseFloat(payment.worker_amount || 0).toLocaleString()}</div>
+                        <div><strong>Commission:</strong> ৳{parseFloat(payment.admin_commission || 0).toLocaleString()} ({payment.commission_percentage}%)</div>
                         <div><strong>Payment Type:</strong> {payment.payment_type}</div>
                       </div>
 
@@ -352,7 +393,7 @@ export default function AdminDashboard() {
                             </CardDescription>
                           </div>
                           <div className="text-right">
-                            <div className="text-2xl font-bold">৳{request.amount.toLocaleString()}</div>
+                            <div className="text-2xl font-bold">৳{parseFloat(request.amount || 0).toLocaleString()}</div>
                             <Badge variant={
                               request.status === 'approved' ? 'default' :
                                 request.status === 'pending' ? 'secondary' : 'destructive'
@@ -366,21 +407,15 @@ export default function AdminDashboard() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
                           <div><strong>Bank:</strong> {request.bank_name}</div>
                           <div><strong>Account:</strong> {request.bank_account}</div>
-                          <div><strong>Worker Balance:</strong> ৳{worker?.balance.toLocaleString()}</div>
+                          <div><strong>Worker Balance:</strong> ৳{parseFloat(worker?.balance || 0).toLocaleString()}</div>
                           <div><strong>Request Date:</strong> {new Date(request.created_at).toLocaleDateString()}</div>
                         </div>
 
                         {request.status === 'pending' && (
                           <div className="flex space-x-2">
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Approve
+                            <Button size="sm" asChild>
+                              <Link href="/admin/cashout-requests">Manage</Link>
                             </Button>
-                            <Button size="sm" variant="destructive">
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Reject
-                            </Button>
-                            <Button size="sm" variant="outline">Add Note</Button>
                           </div>
                         )}
                       </CardContent>
@@ -462,7 +497,12 @@ export default function AdminDashboard() {
 
                     <div className="flex justify-between text-sm">
                       <span>This Month</span>
-                      <span className="font-medium">৳{payments.filter(p => new Date(p.created_at).getMonth() === new Date().getMonth()).reduce((sum, p) => sum + p.admin_commission, 0).toLocaleString()}</span>
+                      <span className="font-medium">
+                        ৳{payments
+                          .filter(p => new Date(p.created_at).getMonth() === new Date().getMonth())
+                          .reduce((sum, p) => sum + parseFloat(p.admin_commission || 0), 0)
+                          .toLocaleString()}
+                      </span>
                     </div>
 
                     <div className="flex justify-between text-sm">

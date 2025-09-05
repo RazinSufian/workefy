@@ -17,11 +17,12 @@ export default function EditWorkerProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [workerData, setWorkerData] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [allSkills, setAllSkills] = useState([]);
+  const [selectedSkills, setSelectedSkills] = useState(new Set());
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     address: '',
-    skills: '',
     category: '',
     preferredTimes: [],
     isAvailable: true,
@@ -40,23 +41,28 @@ export default function EditWorkerProfilePage() {
         setCurrentUser(workerUser);
 
         if (workerUser) {
-          const [workersRes, categoriesRes] = await Promise.all([
+          const [workersRes, categoriesRes, skillsRes] = await Promise.all([
             fetch('/api/workers'),
             fetch('/api/categories'),
+            fetch('/api/skills'),
           ]);
 
           const allWorkers = await workersRes.json();
           const currentWorker = allWorkers.find((w) => w.user_id === workerUser.user_id);
           setWorkerData(currentWorker);
           setCategories(await categoriesRes.json());
+          setAllSkills(await skillsRes.json());
 
           if (currentWorker) {
+            const workerSkillsRes = await fetch(`/api/workers/${currentWorker.worker_id}/skills`);
+            const workerSkills = await workerSkillsRes.json();
+            setSelectedSkills(new Set(workerSkills.map(s => s.skill_id)));
+
             setFormData(prev => ({
               ...prev,
               name: workerUser.name,
               phone: workerUser.phone,
               address: workerUser.address,
-              skills: currentWorker.skills,
               category: currentWorker.category_id.toString(),
               preferredTimes: currentWorker.preferred_times.split(', '),
               isAvailable: currentWorker.is_available,
@@ -80,6 +86,16 @@ export default function EditWorkerProfilePage() {
     }));
   };
 
+  const handleSkillChange = (skillId, checked) => {
+    const newSelectedSkills = new Set(selectedSkills);
+    if (checked) {
+      newSelectedSkills.add(skillId);
+    } else {
+      newSelectedSkills.delete(skillId);
+    }
+    setSelectedSkills(newSelectedSkills);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -92,7 +108,6 @@ export default function EditWorkerProfilePage() {
     data.append('name', formData.name);
     data.append('phone', formData.phone);
     data.append('address', formData.address);
-    data.append('skills', formData.skills);
     data.append('category_id', formData.category);
     data.append('preferred_times', formData.preferredTimes.join(', '));
     data.append('is_available', formData.isAvailable);
@@ -128,6 +143,16 @@ export default function EditWorkerProfilePage() {
         throw new Error('Failed to update worker profile');
       }
 
+      const skillsRes = await fetch(`/api/workers/${workerData.worker_id}/skills`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skill_ids: Array.from(selectedSkills) }),
+      });
+
+      if (!skillsRes.ok) {
+        throw new Error('Failed to update skills');
+      }
+
       toast.success('Profile updated successfully!');
       router.push('/worker/profile');
     } catch (error) {
@@ -142,20 +167,7 @@ export default function EditWorkerProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Button variant="ghost" onClick={() => router.back()} className="mr-4">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <div className="flex items-center space-x-2">
-              <User className="h-6 w-6 text-blue-600" />
-              <h1 className="text-xl font-bold">Edit Profile</h1>
-            </div>
-          </div>
-        </div>
-      </header>
+      
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-4xl mx-auto">
@@ -254,13 +266,19 @@ export default function EditWorkerProfilePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="skills">Skills</Label>
-                  <Textarea
-                    id="skills"
-                    value={formData.skills}
-                    onChange={(e) => setFormData(prev => ({ ...prev, skills: e.target.value }))}
-                    placeholder="e.g., Plumbing, Electrical work, House cleaning"
-                  />
+                  <Label>Skills</Label>
+                  <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {allSkills.map(skill => (
+                      <div key={skill.skill_id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`skill-${skill.skill_id}`}
+                          checked={selectedSkills.has(skill.skill_id)}
+                          onCheckedChange={(checked) => handleSkillChange(skill.skill_id, !!checked)}
+                        />
+                        <Label htmlFor={`skill-${skill.skill_id}`} className="capitalize">{skill.name}</Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

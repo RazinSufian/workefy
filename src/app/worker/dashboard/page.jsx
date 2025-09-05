@@ -12,6 +12,10 @@ import {
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 export default function WorkerDashboard() {
   const { data: session, status } = useSession();
@@ -22,6 +26,13 @@ export default function WorkerDashboard() {
   const [biddingJobs, setBiddingJobs] = useState([]);
   const [cashoutRequests, setCashoutRequests] = useState([]);
   const [biddings, setBiddings] = useState([]);
+
+  // Cashout form state
+  const [cashoutAmount, setCashoutAmount] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [bankAccount, setBankAccount] = useState('');
+  const [bankRouting, setBankRouting] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -38,32 +49,37 @@ export default function WorkerDashboard() {
       const fetchData = async () => {
         try {
           if (user) {
-            const [workersRes, jobsRes, cashoutRequestsRes, biddingsRes] = await Promise.all([
-              fetch(`/api/workers?userId=${user.id}`),
-              fetch('/api/jobs'),
-              fetch('/api/cashout-requests'),
-              fetch('/api/biddings'),
-            ]);
-
+            console.log("Session user:", user);
+            // 1. Fetch worker data
+            const workersRes = await fetch(`/api/workers?userId=${user.id}`);
             const worker = await workersRes.json();
+            console.log("Fetched worker data:", worker);
             setWorkerData(worker);
 
-            const allJobs = await jobsRes.json();
-            if (worker) {
-              const assigned = allJobs.filter((j) => j.status === 'assigned' || j.status === 'in_progress');
-              setAssignedJobs(assigned);
-              const bidding = allJobs.filter((j) => j.job_type === 'bidding' && j.status === 'posted');
-              setBiddingJobs(bidding);
-            }
+            if (worker && worker.worker_id) {
+              // 2. Fetch assigned jobs using worker_id
+              const jobsRes = await fetch(`/api/jobs?worker_id=${worker.worker_id}`);
+              const allJobs = await jobsRes.json();
+              console.log("Fetched jobs:", allJobs);
+              setAssignedJobs(allJobs); // Show all jobs for the worker
 
-            const allCashoutRequests = await cashoutRequestsRes.json();
-            if (worker) {
+              // Fetch other data in parallel
+              const [cashoutRequestsRes, biddingsRes] = await Promise.all([
+                fetch('/api/cashout-requests'),
+                fetch('/api/biddings'),
+              ]);
+
+              const allCashoutRequests = await cashoutRequestsRes.json();
               setCashoutRequests(allCashoutRequests.filter((cr) => cr.worker_id === worker.worker_id));
-            }
 
-            const allBiddings = await biddingsRes.json();
-            if (worker) {
+              const allBiddings = await biddingsRes.json();
               setBiddings(allBiddings.filter((b) => b.worker_id === worker.worker_id));
+
+              // Fetch bidding jobs separately
+              const biddingJobsRes = await fetch('/api/jobs');
+              const biddingJobs = await biddingJobsRes.json();
+              const bidding = biddingJobs.filter((j) => j.job_type === 'bidding' && j.status === 'posted');
+              setBiddingJobs(bidding);
             }
           }
         } catch (error) {
@@ -74,6 +90,50 @@ export default function WorkerDashboard() {
       fetchData();
     }
   }, [session, status, router]);
+
+  const handleCashoutRequest = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    if (parseFloat(cashoutAmount) > workerData.balance) {
+      toast.error("Cannot request more than your available balance.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/cashout-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          worker_id: workerData.worker_id,
+          amount: parseFloat(cashoutAmount),
+          bank_name: bankName,
+          bank_account: bankAccount,
+          bank_routing: bankRouting,
+          status: 'pending',
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to submit cashout request');
+      }
+
+      toast.success('Cashout request submitted successfully!');
+      // Refresh cashout requests
+      const cashoutRequestsRes = await fetch('/api/cashout-requests');
+      const allCashoutRequests = await cashoutRequestsRes.json();
+      setCashoutRequests(allCashoutRequests.filter((cr) => cr.worker_id === workerData.worker_id));
+
+      // Close dialog
+      document.getElementById('close-dialog').click();
+
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const stats = {
     totalJobs: workerData?.total_jobs || 0,
@@ -88,33 +148,6 @@ export default function WorkerDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Briefcase className="h-8 w-8 text-blue-600" />
-              <div>
-                <h1 className="text-xl font-bold">Worker Dashboard</h1>
-                <p className="text-sm text-gray-500">Welcome back, {currentUser.name}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Badge variant={workerData?.verification_status === 'approved' ? 'default' : 'secondary'}>
-                {workerData?.verification_status === 'approved' ? 'Verified' : 'Pending Verification'}
-              </Badge>
-              <Link href="/worker/profile" className="text-gray-500 hover:text-gray-700">
-                <User className="h-6 w-6" />
-              </Link>
-              <Button variant="ghost" size="sm" onClick={() => signOut()}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -167,7 +200,7 @@ export default function WorkerDashboard() {
         <Tabs defaultValue="jobs" className="space-y-6">
           <TabsList>
             <TabsTrigger value="jobs">My Jobs</TabsTrigger>
-            <TabsTrigger value="opportunities">Job Opportunities</TabsTrigger>
+            
             <TabsTrigger value="bids">My Bids</TabsTrigger>
             <TabsTrigger value="earnings">Earnings</TabsTrigger>
           </TabsList>
@@ -224,48 +257,7 @@ export default function WorkerDashboard() {
             </div>
           </TabsContent>
 
-          <TabsContent value="opportunities" className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-4">Available Job Opportunities</h2>
-              <div className="space-y-4">
-                {biddingJobs.map(job => (
-                  <Card key={job.job_id}>
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg">{job.title}</CardTitle>
-                          <CardDescription className="mt-2">{job.description}</CardDescription>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold">৳{job.budget.toLocaleString()}</div>
-                          <div className="text-sm text-gray-500">{job.workers_needed} workers needed</div>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4">
-                        <div className="flex items-center space-x-2">
-                          <MapPin className="h-4 w-4 text-gray-400" />
-                          <span>{job.location}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
-                          <span>{job.duration_value} {job.duration_type}(s)</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Clock className="h-4 w-4 text-gray-400" />
-                          <span>Posted {new Date(job.created_at).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                      <Button asChild>
-                        <Link href="/worker/bids">{job.job_type === 'bidding' ? 'Place Bid' : 'Apply Now'}</Link>
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          </TabsContent>
+          
 
           <TabsContent value="bids" className="space-y-6">
             <div className="flex justify-between items-center">
@@ -322,9 +314,42 @@ export default function WorkerDashboard() {
                   <div className="text-3xl font-bold text-green-600 mb-4">
                     ৳{stats.balance.toLocaleString()}
                   </div>
-                  <Button className="w-full">
-                    Request Cashout
-                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button className="w-full">Request Cashout</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Request a Cashout</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleCashoutRequest}>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="amount" className="text-right">Amount</Label>
+                            <Input id="amount" type="number" value={cashoutAmount} onChange={(e) => setCashoutAmount(e.target.value)} className="col-span-3" required />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="bankName" className="text-right">Bank Name</Label>
+                            <Input id="bankName" value={bankName} onChange={(e) => setBankName(e.target.value)} className="col-span-3" required />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="bankAccount" className="text-right">Account No.</Label>
+                            <Input id="bankAccount" value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="col-span-3" required />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="bankRouting" className="text-right">Routing No.</Label>
+                            <Input id="bankRouting" value={bankRouting} onChange={(e) => setBankRouting(e.target.value)} className="col-span-3" />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button type="button" variant="secondary" id="close-dialog">Cancel</Button>
+                          </DialogClose>
+                          <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Submitting...' : 'Submit Request'}</Button>
+                        </DialogFooter>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                   <Button variant="outline" className="w-full mt-2" asChild>
                     <Link href="/worker/profile">Edit Profile</Link>
                   </Button>

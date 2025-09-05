@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { User, Camera, ArrowLeft } from 'lucide-react';
+import { User, Camera, ArrowLeft, Star } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
 
@@ -15,6 +15,8 @@ export default function WorkerProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [workerData, setWorkerData] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [users, setUsers] = useState([]);
   const [availabilitySlots, setAvailabilitySlots] = useState([
     { day: 'Monday', morning: true, afternoon: false, evening: false },
     { day: 'Tuesday', morning: true, afternoon: true, evening: false },
@@ -30,19 +32,22 @@ export default function WorkerProfilePage() {
       try {
         const usersRes = await fetch('/api/users');
         const allUsers = await usersRes.json();
+        setUsers(allUsers);
         const workerUser = allUsers.find((u) => u.role === 'worker');
         setCurrentUser(workerUser);
 
         if (workerUser) {
-          const [workersRes, categoriesRes] = await Promise.all([
+          const [workersRes, categoriesRes, reviewsRes] = await Promise.all([
             fetch('/api/workers'),
             fetch('/api/categories'),
+            fetch(`/api/reviews?reviewee_id=${workerUser.user_id}`),
           ]);
 
           const allWorkers = await workersRes.json();
           const currentWorker = allWorkers.find((w) => w.user_id === workerUser.user_id);
           setWorkerData(currentWorker);
           setCategories(await categoriesRes.json());
+          setReviews(await reviewsRes.json());
         }
       } catch (error) {
         console.error("Failed to fetch worker profile data:", error);
@@ -153,6 +158,36 @@ export default function WorkerProfilePage() {
                       <Badge key={time} variant="secondary">{time}</Badge>
                     ))}
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Reviews */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Reviews</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {reviews.map((review) => {
+                    const reviewer = users.find(u => u.user_id === review.reviewer_id);
+                    return (
+                      <div key={review.review_id} className="border-b pb-4">
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium">{reviewer?.name}</div>
+                          <div className="flex items-center space-x-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`h-5 w-5 ${review.rating >= star ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-gray-600 mt-2">{review.comment}</p>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ArrowLeft, AlertTriangle, MessageSquare, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { Dispute, Job, User, Worker } from '@/types';
 
 export default function AdminDisputesPage() {
   const [disputes, setDisputes] = useState([]);

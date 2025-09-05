@@ -5,11 +5,14 @@ import { writeFile } from 'fs/promises';
 import path from 'path';
 
 // ->> /api/workers/[id]
-export async function GET(request, { params } ) {
+export async function GET(request, { params }) {
   try {
     const conn = await dbConnection();
     const [rows] = await conn.query("SELECT * FROM workers WHERE worker_id = ?", [params.id]);
-    return NextResponse.json(rows);
+    if (rows.length === 0) {
+      return NextResponse.json({ message: "Worker not found" }, { status: 404 });
+    }
+    return NextResponse.json(rows[0]);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: "Cannot get worker" }, { status: 500 });

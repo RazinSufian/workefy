@@ -40,7 +40,6 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE users
 -- =========================================
 -- Workers table
 -- =========================================
@@ -56,6 +55,7 @@ CREATE TABLE workers (
         'approved',
         'rejected'
     ) DEFAULT 'pending',
+    rejection_reason TEXT,
     preferred_times TEXT,
     balance DECIMAL(12, 2) DEFAULT 0.00,
     rating DECIMAL(3, 2) DEFAULT 0.00,
@@ -123,6 +123,25 @@ CREATE TABLE categories (
 );
 
 -- =========================================
+-- Skills table
+-- =========================================
+CREATE TABLE skills (
+    skill_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
+
+-- =========================================
+-- Worker Skills table
+-- =========================================
+CREATE TABLE worker_skills (
+    worker_id INT NOT NULL,
+    skill_id INT NOT NULL,
+    PRIMARY KEY (worker_id, skill_id),
+    FOREIGN KEY (worker_id) REFERENCES workers (worker_id) ON DELETE CASCADE,
+    FOREIGN KEY (skill_id) REFERENCES skills (skill_id) ON DELETE CASCADE
+);
+
+-- =========================================
 -- Jobs table
 -- =========================================
 CREATE TABLE jobs (
@@ -158,7 +177,7 @@ CREATE TABLE job_assignments (
     assignment_id INT AUTO_INCREMENT PRIMARY KEY,
     job_id INT NOT NULL,
     worker_id INT NOT NULL,
-    assigned_by INT NOT NULL, -- admin_id
+    assigned_by_admin INT NOT NULL,
     status ENUM(
         'assigned',
         'completed',
@@ -166,7 +185,7 @@ CREATE TABLE job_assignments (
     ) DEFAULT 'assigned',
     FOREIGN KEY (job_id) REFERENCES jobs (job_id) ON DELETE CASCADE,
     FOREIGN KEY (worker_id) REFERENCES workers (worker_id),
-    FOREIGN KEY (assigned_by) REFERENCES admins (admin_id)
+    FOREIGN KEY (assigned_by_admin) REFERENCES admins (admin_id)
 );
 
 -- =========================================
@@ -290,3 +309,33 @@ CREATE TABLE disputes (
     FOREIGN KEY (client_id) REFERENCES clients (client_id),
     FOREIGN KEY (worker_id) REFERENCES workers (worker_id)
 );
+
+-- Step 1: Add the new columns
+ALTER TABLE job_assignments
+ADD COLUMN assigned_by_client INT NULL,
+ADD COLUMN assigned_by_admin INT NULL;
+
+-- Step 2: Migrate existing data (assuming current assigned_by refers to admins)
+-- If your current assigned_by column represents admin assignments:
+UPDATE job_assignments SET assigned_by_admin = assigned_by;
+
+-- Alternative: If your current assigned_by could be either client or admin,
+-- you'll need to determine the logic. For example:
+-- UPDATE job_assignments
+-- SET assigned_by_admin = assigned_by
+-- WHERE assigned_by IN (SELECT admin_id FROM admins);
+--
+-- UPDATE job_assignments
+-- SET assigned_by_client = assigned_by
+-- WHERE assigned_by IN (SELECT client_id FROM clients);
+
+-- Step 3: Drop the old column and its foreign key constraint
+ALTER TABLE job_assignments DROP FOREIGN KEY job_assignments_ibfk_3;
+-- This might have a different name, check with SHOW CREATE TABLE
+
+ALTER TABLE job_assignments DROP COLUMN assigned_by;
+
+-- Step 4: Add the new foreign key constraints
+ALTER TABLE job_assignments
+ADD CONSTRAINT fk_assigned_by_client FOREIGN KEY (assigned_by_client) REFERENCES clients (client_id),
+ADD CONSTRAINT fk_assigned_by_admin FOREIGN KEY (assigned_by_admin) REFERENCES admins (admin_id);

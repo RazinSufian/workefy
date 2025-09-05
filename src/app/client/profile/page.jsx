@@ -6,13 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { User, Camera, ArrowLeft } from 'lucide-react';
+import { User, Camera, ArrowLeft, Star } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ClientProfilePage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState(null);
   const [clientData, setClientData] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [users, setUsers] = useState([]);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
 
@@ -22,14 +24,20 @@ export default function ClientProfilePage() {
         // Simulate getting the current user. In a real app, this would come from an auth context.
         const usersRes = await fetch('/api/users');
         const allUsers = await usersRes.json();
+        setUsers(allUsers);
         const clientUser = allUsers.find((u) => u.role === 'client');
         setCurrentUser(clientUser);
 
         if (clientUser) {
-          const clientsRes = await fetch('/api/clients');
+          const [clientsRes, reviewsRes] = await Promise.all([
+            fetch('/api/clients'),
+            fetch(`/api/reviews?reviewee_id=${clientUser.user_id}`),
+          ]);
+
           const allClients = await clientsRes.json();
           const currentClient = allClients.find((c) => c.user_id === clientUser.user_id);
           setClientData(currentClient);
+          setReviews(await reviewsRes.json());
         }
       } catch (error) {
         console.error("Failed to fetch client profile data:", error);
@@ -118,6 +126,36 @@ export default function ClientProfilePage() {
                 <div>
                   <Label>Bio</Label>
                   <p>Looking for reliable workers for various projects. We value quality work and timely completion.</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Reviews */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Reviews</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {reviews.map((review) => {
+                    const reviewer = users.find(u => u.user_id === review.reviewer_id);
+                    return (
+                      <div key={review.review_id} className="border-b pb-4">
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium">{reviewer?.name}</div>
+                          <div className="flex items-center space-x-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`h-5 w-5 ${review.rating >= star ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-gray-600 mt-2">{review.comment}</p>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
